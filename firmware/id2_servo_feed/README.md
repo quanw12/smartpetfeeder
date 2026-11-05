@@ -52,6 +52,10 @@ Firmware ESP32 cho Luồng 2 trong proposal: nhận lệnh qua MQTT, mở cửa 
 
 **B. Wokwi (khi chưa có hàng):** tạo project ESP32 mới trên wokwi.com rồi dán `id2_servo_feed.ino`, `secrets.h` (dùng bộ cấu hình Wokwi trong `secrets.example.h`), `diagram.json` và `libraries.txt`. Bấm Play, đợi `[MQTT] ... OK`. Sau đó vào <https://www.hivemq.com/demos/websocket-client/>, Connect, publish lên topic `feeder/cmd/feed` payload `{"duration_ms":1500}`, rồi subscribe `feeder/status` để xem xác nhận.
 > `broker.hivemq.com` là broker công khai, ai cũng publish được vào cùng topic, nên chỉ dùng để thử.
+>
+> **Để tab Wokwi hiện trên màn hình.** Tab bị ẩn thì mô phỏng tụt còn vài phần trăm tốc độ thật, dẫn đến hai hiện tượng không phải lỗi code:
+> - Dashboard báo "Không nhận được xác nhận từ hộp" vì quá 8 giây thực vẫn chưa có `done`. Khi `done` tới, dòng này tự được thay.
+> - Dashboard chuyển sang Offline và mất xác nhận, vì broker không nhận được keepalive đúng hạn nên ngắt kết nối. Nếu buộc phải chạy chậm, tạm đổi `mqtt.setKeepAlive(30)` thành `600` trên bản Wokwi.
 
 **C. Chạy thật với HiveMQ Cloud:** copy `secrets.example.h` thành `secrets.h`, điền WiFi và thông tin cluster, đặt `MQTT_USE_TLS 1`. Test lại như B bằng tab *Web Client* của cluster, hoặc bằng node `mqtt out` trong Node-RED.
 
