@@ -1,0 +1,126 @@
+[
+  { "id": "1d2f00000000a001", "type": "tab", "label": "ID 2 - Cho ăn", "disabled": false, "info": "" },
+  {
+    "id": "1d2f00000000a002", "type": "comment", "z": "1d2f00000000a001",
+    "name": "ID 2 - Luồng 2: Dashboard -> MQTT -> ESP32 -> xác nhận (file do AI (Claude) sinh 05/11/2026)",
+    "info": "Bấm CHO ĂN -> gửi {\"duration_ms\":...} lên feeder/cmd/feed (retain=false).\nESP32 trả về feeder/status: opening, done hoặc rejected.\nKhông có done sau 8 s thì báo không nhận được xác nhận.",
+    "x": 370, "y": 40, "wires": []
+  },
+
+  {
+    "id": "1d2f00000000b001", "type": "mqtt-broker", "name": "Broker hộp cho ăn",
+    "broker": "broker.hivemq.com", "port": "1883", "tls": "", "clientid": "", "autoConnect": true,
+    "usetls": false, "protocolVersion": "4", "keepalive": "60", "cleansession": true, "autoUnsubscribe": true,
+    "birthTopic": "", "birthQos": "0", "birthRetain": "false", "birthPayload": "", "birthMsg": {},
+    "closeTopic": "", "closeQos": "0", "closeRetain": "false", "closePayload": "", "closeMsg": {},
+    "willTopic": "", "willQos": "0", "willRetain": "false", "willPayload": "", "willMsg": {},
+    "userProps": "", "sessionExpiry": ""
+  },
+  {
+    "id": "1d2f00000000c001", "type": "ui-base", "name": "Hộp cho ăn", "path": "/dashboard", "appIcon": "",
+    "includeClientData": true, "acceptsClientConfig": ["ui-notification", "ui-control"],
+    "showPathInSidebar": false, "headerContent": "page", "navigationStyle": "default", "titleBarStyle": "default",
+    "showReconnectNotification": true, "notificationDisplayTime": 1, "showDisconnectNotification": true, "allowInstall": false
+  },
+  {
+    "id": "1d2f00000000c002", "type": "ui-theme", "name": "Giao diện hộp cho ăn",
+    "colors": { "surface": "#fcfcfd", "primary": "#0d74ce", "bgPage": "#f9f9fb", "groupBg": "#ffffff", "groupOutline": "#d9d9e0" },
+    "sizes": { "density": "default", "pagePadding": "12px", "groupGap": "12px", "groupBorderRadius": "4px", "widgetGap": "12px" }
+  },
+  {
+    "id": "1d2f00000000c003", "type": "ui-page", "name": "Dashboard", "ui": "1d2f00000000c001", "path": "/feeder", "icon": "home",
+    "layout": "grid", "theme": "1d2f00000000c002",
+    "breakpoints": [
+      { "name": "Default", "px": 0, "cols": 3 }, { "name": "Tablet", "px": 576, "cols": 6 },
+      { "name": "Small Desktop", "px": 768, "cols": 9 }, { "name": "Desktop", "px": 1024, "cols": 12 }
+    ],
+    "order": 1, "className": "", "visible": "true", "disabled": "false"
+  },
+  {
+    "id": "1d2f00000000c004", "type": "ui-group", "name": "Cho ăn", "page": "1d2f00000000c003", "width": 6, "height": 1, "order": 1,
+    "showTitle": true, "className": "", "visible": true, "disabled": false, "groupType": "default"
+  },
+
+  {
+    "id": "1d2f00000000d001", "type": "inject", "z": "1d2f00000000a001", "name": "Mặc định 1.5 s",
+    "props": [ { "p": "payload" } ], "repeat": "", "crontab": "", "once": true, "onceDelay": "0.5", "topic": "",
+    "payload": "1.5", "payloadType": "num", "x": 150, "y": 100, "wires": [ [ "1d2f00000000d002", "1d2f00000000d003" ] ]
+  },
+  {
+    "id": "1d2f00000000d002", "type": "ui-slider", "z": "1d2f00000000a001", "group": "1d2f00000000c004", "name": "Thời gian mở",
+    "label": "Thời gian mở (giây)", "tooltip": "", "order": 1, "width": 0, "height": 0, "passthru": false, "outs": "end",
+    "topic": "topic", "topicType": "msg", "thumbLabel": "always", "showTicks": "false", "min": 0.2, "max": 5, "step": 0.1,
+    "className": "", "iconPrepend": "", "iconAppend": "", "color": "", "colorTrack": "", "colorThumb": "", "showTextField": false,
+    "x": 370, "y": 100, "wires": [ [ "1d2f00000000d003" ] ]
+  },
+  {
+    "id": "1d2f00000000d003", "type": "change", "z": "1d2f00000000a001", "name": "Lưu thời gian mở",
+    "rules": [ { "t": "set", "p": "feedDurationS", "pt": "flow", "to": "payload", "tot": "msg" } ],
+    "x": 590, "y": 100, "wires": [ [] ]
+  },
+  {
+    "id": "1d2f00000000e001", "type": "ui-button", "z": "1d2f00000000a001", "group": "1d2f00000000c004", "name": "Nút CHO ĂN",
+    "label": "CHO ĂN", "order": 2, "width": 0, "height": 0, "emulateClick": false, "tooltip": "", "color": "", "bgcolor": "",
+    "className": "", "icon": "food-drumstick", "iconPosition": "left", "payload": "feed", "payloadType": "str",
+    "topic": "topic", "topicType": "msg", "buttonColor": "", "textColor": "", "iconColor": "", "enableClick": true,
+    "enablePointerdown": false, "pointerdownPayload": "", "pointerdownPayloadType": "str",
+    "enablePointerup": false, "pointerupPayload": "", "pointerupPayloadType": "str",
+    "x": 140, "y": 180, "wires": [ [ "1d2f00000000e002" ] ]
+  },
+  {
+    "id": "1d2f00000000e002", "type": "function", "z": "1d2f00000000a001", "name": "Tạo lệnh cho ăn",
+    "func": "// Đổi giây trên thanh trượt sang duration_ms, giữ trong khoảng firmware cho phép.\nconst giay = Number(flow.get('feedDurationS') ?? 1.5);\nconst durationMs = Math.round(Math.min(5, Math.max(0.2, giay)) * 1000);\n\n// retain=false: nếu retain, mỗi lần ESP32 kết nối lại sẽ tự cho ăn thêm.\nconst lenh = { topic: 'feeder/cmd/feed', payload: { duration_ms: durationMs }, qos: 0, retain: false };\nconst hienThi = { payload: 'Đã gửi lệnh, đang chờ hộp...' };\nreturn [lenh, hienThi];",
+    "outputs": 2, "timeout": 0, "noerr": 0, "initialize": "", "finalize": "", "libs": [],
+    "x": 340, "y": 180, "wires": [ [ "1d2f00000000e003", "1d2f00000000e004" ], [ "1d2f00000000f001" ] ]
+  },
+  {
+    "id": "1d2f00000000e003", "type": "mqtt out", "z": "1d2f00000000a001", "name": "feeder/cmd/feed", "topic": "feeder/cmd/feed",
+    "qos": "0", "retain": "false", "respTopic": "", "contentType": "", "userProps": "", "correl": "", "expiry": "",
+    "broker": "1d2f00000000b001", "x": 580, "y": 160, "wires": []
+  },
+  {
+    "id": "1d2f00000000e004", "type": "trigger", "z": "1d2f00000000a001", "name": "Chờ xác nhận 8 s",
+    "op1": "", "op2": "Không nhận được xác nhận từ hộp", "op1type": "nul", "op2type": "str",
+    "duration": "8", "extend": true, "overrideDelay": false, "units": "s", "reset": "", "bytopic": "all", "topic": "topic", "outputs": 1,
+    "x": 590, "y": 220, "wires": [ [ "1d2f00000000f001" ] ]
+  },
+  {
+    "id": "1d2f00000000e101", "type": "mqtt in", "z": "1d2f00000000a001", "name": "feeder/status", "topic": "feeder/status",
+    "qos": "0", "datatype": "json", "broker": "1d2f00000000b001", "nl": false, "rap": true, "rh": 0, "inputs": 0,
+    "x": 130, "y": 300, "wires": [ [ "1d2f00000000e102" ] ]
+  },
+  {
+    "id": "1d2f00000000e102", "type": "function", "z": "1d2f00000000a001", "name": "Đọc xác nhận",
+    "func": "// Chỉ xử lý sự kiện của ID 2; topic này có thể có sự kiện khác về sau.\nconst s = msg.payload;\nif (!s || s.event !== 'feed') return null;\n\nconst giay = (s.duration_ms / 1000).toFixed(1);\nlet text;\nlet ketThuc = false;   // true: ngừng đếm 8 s\nif (s.result === 'opening') {\n    text = `Đang mở cửa (${giay} s)`;\n} else if (s.result === 'done') {\n    text = `Đã cho ăn xong (${giay} s)`;\n    ketThuc = true;\n} else if (s.result === 'rejected' && s.reason === 'busy') {\n    // Lệnh trước vẫn đang chạy nên vẫn tiếp tục chờ done của lệnh đó.\n    text = 'Cửa đang mở, lệnh mới bị bỏ qua';\n} else if (s.result === 'rejected') {\n    text = 'Hộp từ chối lệnh không hợp lệ';\n    ketThuc = true;\n} else {\n    return null;\n}\nreturn [{ payload: text }, ketThuc ? { reset: true } : null];",
+    "outputs": 2, "timeout": 0, "noerr": 0, "initialize": "", "finalize": "", "libs": [],
+    "x": 340, "y": 300, "wires": [ [ "1d2f00000000f001" ], [ "1d2f00000000e004" ] ]
+  },
+  {
+    "id": "1d2f00000000f001", "type": "ui-text", "z": "1d2f00000000a001", "group": "1d2f00000000c004", "order": 3, "width": 0, "height": 0,
+    "name": "Trạng thái cho ăn", "label": "Trạng thái", "format": "{{msg.payload}}", "layout": "row-spread", "style": false,
+    "font": "", "fontSize": 16, "color": "#717171", "wrapText": true, "className": "", "value": "payload", "valueType": "msg",
+    "x": 810, "y": 220, "wires": []
+  },
+  {
+    "id": "1d2f00000000e201", "type": "inject", "z": "1d2f00000000a001", "name": "Chưa rõ", "props": [ { "p": "payload" } ],
+    "repeat": "", "crontab": "", "once": true, "onceDelay": "0.1", "topic": "", "payload": "Chưa có tín hiệu", "payloadType": "str",
+    "x": 590, "y": 340, "wires": [ [ "1d2f00000000e204" ] ]
+  },
+  {
+    "id": "1d2f00000000e202", "type": "mqtt in", "z": "1d2f00000000a001", "name": "feeder/online", "topic": "feeder/online",
+    "qos": "0", "datatype": "json", "broker": "1d2f00000000b001", "nl": false, "rap": true, "rh": 0, "inputs": 0,
+    "x": 130, "y": 400, "wires": [ [ "1d2f00000000e203" ] ]
+  },
+  {
+    "id": "1d2f00000000e203", "type": "function", "z": "1d2f00000000a001", "name": "Online / Offline",
+    "func": "// Tin retained từ ESP32; broker tự gửi online=false (LWT) khi hộp rớt mạng.\nmsg.payload = msg.payload && msg.payload.online ? 'Online' : 'Offline';\nreturn msg;",
+    "outputs": 1, "timeout": 0, "noerr": 0, "initialize": "", "finalize": "", "libs": [],
+    "x": 340, "y": 400, "wires": [ [ "1d2f00000000e204" ] ]
+  },
+  {
+    "id": "1d2f00000000e204", "type": "ui-text", "z": "1d2f00000000a001", "group": "1d2f00000000c004", "order": 4, "width": 0, "height": 0,
+    "name": "Kết nối hộp", "label": "Kết nối hộp", "format": "{{msg.payload}}", "layout": "row-spread", "style": false,
+    "font": "", "fontSize": 16, "color": "#717171", "wrapText": false, "className": "", "value": "payload", "valueType": "msg",
+    "x": 810, "y": 400, "wires": []
+  }
+]
