@@ -1,0 +1,7 @@
+# Cau hinh that (WiFi, MQTT, API key): khong dua len git
+secrets.h
+.env
+
+# Node-RED cuc bo
+flows_cred.json
+node_modules/
