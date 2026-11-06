@@ -61,6 +61,6 @@ Firmware ESP32 cho Luồng 2 trong proposal: nhận lệnh qua MQTT, mở cửa 
 
 Các trường hợp cần thử: lệnh bình thường; gửi lệnh thứ hai khi cửa đang mở (phải nhận `busy`); payload `abc` (phải nhận `invalid`); `{"duration_ms":99999}` (cửa chỉ mở 5 s); rút WiFi trong lúc cửa đang mở (cửa vẫn phải đóng đúng giờ).
 
-## Gộp với ID 1 (tuần 8)
+## Gộp với ID 1
 
-Sketch đã tách sẵn `id2Setup()`, `id2Loop()` và `id2XuLyLenh()`. Khi gộp với firmware HC-SR04 của Thuận, chỉ cần dùng chung một client WiFi/MQTT, gọi `id2Setup()` trong `setup()` và `id2Loop()` trong `loop()`, rồi cho callback chuyển topic `feeder/cmd/feed` vào `id2XuLyLenh()`. Code phía Thuận cũng không được dùng `delay()` dài trong `loop()`, nếu không cửa sẽ đóng trễ.
+Đã gộp ở [`firmware/smart_pet_feeder`](../smart_pet_feeder/README.md). Sản phẩm thật nạp sketch đó, sketch này chỉ để thử riêng servo. Sửa logic cửa thì sửa ở cả hai nơi.

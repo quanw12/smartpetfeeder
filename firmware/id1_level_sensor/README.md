@@ -18,10 +18,10 @@ Cầu chia áp: Echo → 1 kΩ → GPIO 18, và GPIO 18 → 2,2 kΩ → GND.
 ## Cách đo
 
 - Cứ 200 ms đo một lần, mỗi lần chờ tiếng vọng tối đa 25 ms nên không chặn `loop()`.
-- Bỏ các lần đo không có tiếng vọng hoặc ra ngoài khoảng 2–400 cm.
-- Lấy **trung vị** của 5 lần đo gần nhất, vì một lần sóng dội vào thành phễu sẽ không làm lệch kết quả như khi lấy trung bình.
+- Lần đo không có tiếng vọng hoặc ra ngoài khoảng 2–400 cm được tính là lỗi.
+- Lấy **trung vị** của các lần hợp lệ trong 5 lần đo gần nhất, vì một lần sóng dội vào thành phễu sẽ không làm lệch kết quả như khi lấy trung bình.
 - Mức (%) = 100 × (khoảng cách lúc rỗng − khoảng cách đo được) / (khoảng cách lúc rỗng − khoảng cách lúc đầy), kẹp trong 0–100.
-- Có ít hơn 3 lần đo hợp lệ thì không gửi gì, chỉ in cảnh báo ra Serial.
+- Trong 5 lần gần nhất có ít hơn 3 lần hợp lệ thì không gửi gì, chỉ in cảnh báo ra Serial. Vì vậy khi tuột dây, hộp ngừng gửi sau khoảng 1 s chứ không gửi mãi số cũ.
 
 ## Dữ liệu gửi đi
 
@@ -51,11 +51,9 @@ Giá trị mặc định là 20 cm lúc rỗng và 4 cm lúc đầy.
 
 **Xem dữ liệu:** subscribe `feeder/level` bằng HiveMQ Web Client hoặc `mosquitto_sub -h broker.hivemq.com -t feeder/level`.
 
-## Gộp với ID 2 (tuần 8)
+## Gộp với ID 2
 
-- Gọi `id1_setup()` trong `setup()` và `id1_loop()` trong `loop()` của sketch chung.
-- Dùng chung một `WiFiClient` và một `PubSubClient`, bỏ phần kết nối của file này.
-- `feeder/online` do ID 2 quản lý, file này không đụng tới.
+Đã gộp ở [`firmware/smart_pet_feeder`](../smart_pet_feeder/README.md). Sản phẩm thật nạp sketch đó, sketch này chỉ để thử riêng cảm biến. Sửa logic đo thì sửa ở cả hai nơi.
 
 ## Trạng thái kiểm thử
 

@@ -61,10 +61,11 @@ WiFiClient net;         // broker công khai / Wokwi, cổng 1883
 PubSubClient mqtt(net);
 
 // ---------------- Bộ đệm mẫu đo ----------------
-// Vòng tròn: mẫu mới ghi đè mẫu cũ nhất, so_mau_hop_le tối đa SO_MAU
+// Vòng tròn: lần đo mới ghi đè lần cũ nhất. Lần đo lỗi được ghi là -1, nên khi
+// tuột dây cảm biến các số cũ bị đẩy ra sau khoảng 1 s và hộp ngừng gửi mức.
 float mau_do[SO_MAU];
 int vi_tri_ghi = 0;
-int so_mau_hop_le = 0;
+int so_lan_do = 0;
 
 unsigned long lan_do_cuoi = 0;
 unsigned long lan_gui_cuoi = 0;
@@ -88,18 +89,22 @@ float do_mot_lan() {
   return khoang_cach;
 }
 
+// Ghi cả lần đo lỗi (-1) để biết trong 5 lần gần nhất có bao nhiêu lần hợp lệ
 void them_mau(float khoang_cach) {
   mau_do[vi_tri_ghi] = khoang_cach;
   vi_tri_ghi = (vi_tri_ghi + 1) % SO_MAU;
-  if (so_mau_hop_le < SO_MAU) so_mau_hop_le++;
+  if (so_lan_do < SO_MAU) so_lan_do++;
 }
 
-// Trung vị thay cho trung bình: một lần đo sai (sóng dội vào thành phễu)
-// không kéo lệch kết quả
+// Trung vị của các lần đo hợp lệ; một lần đo sai (sóng dội vào thành phễu)
+// không kéo lệch kết quả như trung bình. Trả -1 nếu không đủ lần hợp lệ.
 float tinh_trung_vi() {
   float tam[SO_MAU];
-  int n = so_mau_hop_le;
-  for (int i = 0; i < n; i++) tam[i] = mau_do[i];
+  int n = 0;
+  for (int i = 0; i < so_lan_do; i++) {
+    if (mau_do[i] > 0) tam[n++] = mau_do[i];
+  }
+  if (n < SO_MAU_TOI_THIEU) return -1;
   // Sắp xếp chèn, n <= 5 nên đủ nhanh
   for (int i = 1; i < n; i++) {
     float x = tam[i];
@@ -126,11 +131,11 @@ int tinh_muc(float khoang_cach) {
 
 // ---------------- Gửi mức ----------------
 void gui_muc() {
-  if (so_mau_hop_le < SO_MAU_TOI_THIEU) {
-    Serial.println("[ID1] Chua du mau do hop le, kiem tra day Trig/Echo");
+  float khoang_cach = tinh_trung_vi();
+  if (khoang_cach < 0) {
+    Serial.println("[ID1] Khong du lan do hop le, kiem tra day Trig/Echo");
     return;
   }
-  float khoang_cach = tinh_trung_vi();
   int muc = tinh_muc(khoang_cach);
 
   char buf[64];
@@ -184,8 +189,7 @@ void id1_loop() {
   // Phép trừ unsigned vẫn đúng khi millis() tràn sau ~49 ngày
   if (bay_gio - lan_do_cuoi >= CHU_KY_DO_MS) {
     lan_do_cuoi = bay_gio;
-    float khoang_cach = do_mot_lan();
-    if (khoang_cach > 0) them_mau(khoang_cach);
+    them_mau(do_mot_lan());
   }
   if (bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
     lan_gui_cuoi = bay_gio;

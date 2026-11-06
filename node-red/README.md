@@ -4,8 +4,8 @@
 
 | Tab | Chức năng | Cần gì để chạy thật |
 |---|---|---|
-| ID 1 - Đo mức | Gauge mức thức ăn, giờ cập nhật | Broker MQTT, ESP32 chạy `firmware/id1_level_sensor` |
-| ID 2 - Cho ăn | Thanh trượt, nút CHO ĂN, trạng thái, kết nối hộp | Broker MQTT, ESP32 |
+| ID 1 - Đo mức | Gauge mức thức ăn, giờ cập nhật | Broker MQTT, ESP32 chạy `firmware/smart_pet_feeder` |
+| ID 2 - Cho ăn | Thanh trượt, nút CHO ĂN, trạng thái, kết nối hộp | Broker MQTT, ESP32 chạy `firmware/smart_pet_feeder` |
 | ID 3 - Lưu Supabase | Ghi mức (2 phút/lần) và lần cho ăn, bảng 10 sự kiện gần nhất | Supabase |
 | ID 4 - Biểu đồ 24 giờ | Đọc Supabase mỗi 60 giây, vẽ đường | Supabase có dữ liệu từ ID 3 |
 | ID 5 - Thông báo ntfy | Mức dưới 20% thì báo về điện thoại, có công tắc | `feeder/level` từ ID 1, app ntfy |
