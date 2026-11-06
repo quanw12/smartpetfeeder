@@ -63,4 +63,6 @@ Lần đo lỗi cũng được ghi vào 5 lần đo gần nhất. Dưới 3 lầ
 
 Đã chạy logic bằng `g++` trên máy tính, với WiFi, MQTT, servo và HC-SR04 giả lập (30 kiểm tra đều đạt): đổi ra %, trung vị, ngừng gửi khi tuột dây, mở và đóng cửa đúng giờ, `busy`, `invalid`, kẹp thời gian, đo trong lúc cửa mở, rớt MQTT lúc cửa mở, `millis()` tràn. Bài test này không nằm trong repo.
 
-**Chưa làm:** biên dịch với ESP32 core và thư viện thật, chạy trên Wokwi, nạp lên board. Giả lập không kiểm tra được sụt áp, nhiễu servo hay kết nối TLS thật.
+Đã biên dịch bằng `arduino-cli` cho board ESP32 Dev Module với esp32 core 3.3.12, PubSubClient 2.8 và ESP32Servo 3.2.1, cả khi bật và tắt TLS. Bản bật TLS chiếm khoảng 76% bộ nhớ chương trình và 14% RAM.
+
+**Chưa làm:** chạy trên Wokwi, nạp lên board. Biên dịch và giả lập không kiểm tra được sụt áp, nhiễu servo hay kết nối TLS thật.

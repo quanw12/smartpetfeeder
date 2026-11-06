@@ -57,4 +57,4 @@ Giá trị mặc định là 20 cm lúc rỗng và 4 cm lúc đầy.
 
 ## Trạng thái kiểm thử
 
-Chưa biên dịch bằng `arduino-cli` vì máy chưa cài. Chưa thử trên Wokwi và chưa nạp lên board thật.
+Đã biên dịch bằng `arduino-cli` với esp32 core 3.3.12. Chưa thử trên Wokwi và chưa nạp lên board thật.

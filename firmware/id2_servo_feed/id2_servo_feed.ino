@@ -216,7 +216,7 @@ void setup() {
 
   uint64_t mac = ESP.getEfuseMac();
   snprintf(clientId, sizeof(clientId), "feeder-%04X%08X",
-           (uint16_t)(mac >> 32), (uint32_t)mac);
+           (unsigned int)(mac >> 32), (unsigned int)mac);
 
   ketNoiWifi();
 #if MQTT_USE_TLS
