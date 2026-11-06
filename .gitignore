@@ -5,3 +5,6 @@ secrets.h
 # Node-RED cuc bo
 flows_cred.json
 node_modules/
+
+# ID 7: SQLite chua tai khoan nguoi dung
+*.db

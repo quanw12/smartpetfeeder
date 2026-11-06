@@ -1,0 +1,1344 @@
+[
+  {
+    "id": "7a1c000000001000",
+    "type": "tab",
+    "label": "ID 1 - Đo mức",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "7a1c000000001002",
+    "type": "comment",
+    "z": "7a1c000000001000",
+    "name": "ID 1 - Mức thức ăn từ ESP32 -> kiểm tra -> gauge (File do AI (Claude) sinh ngày 06/11/2026, Thuận đã đọc và chỉnh.)",
+    "info": "File do AI (Claude) sinh ngày 06/11/2026, Thuận đã đọc và chỉnh.\nESP32 gửi {\"level\":72,\"distance_cm\":9.4} lên feeder/level khoảng 5 giây/lần.\nSố đo sai (không phải số, ngoài 0..100) bị bỏ và báo cảnh báo.\nSố đo hợp lệ: hiện lên gauge, lưu global muc_moi_nhat, chuyển sang ID 3 qua link \"ID1 mức hợp lệ\".",
+    "x": 400,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000001001",
+    "type": "ui-group",
+    "name": "Mức thức ăn",
+    "page": "1d2f00000000c003",
+    "width": 6,
+    "height": 1,
+    "order": 2,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default"
+  },
+  {
+    "id": "7a1c000000001003",
+    "type": "mqtt in",
+    "z": "7a1c000000001000",
+    "name": "feeder/level",
+    "topic": "feeder/level",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "1d2f00000000b001",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 120,
+    "wires": [
+      [
+        "7a1c000000001004"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000001004",
+    "type": "function",
+    "z": "7a1c000000001000",
+    "name": "Kiểm tra số đo",
+    "func": "// Định dạng giờ theo múi Việt Nam, không phụ thuộc múi giờ của máy chạy Node-RED.\nfunction phan_gio(d) {\n    const p = {};\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Ho_Chi_Minh', hourCycle: 'h23',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit'\n    }).formatToParts(new Date(d)).forEach(x => { p[x.type] = x.value; });\n    return p;\n}\n\nconst level = msg.payload && msg.payload.level;\n// Chỉ nhận số thật; chuỗi hay null nghĩa là firmware hoặc cảm biến lỗi.\nif (typeof level !== 'number' || !Number.isFinite(level)) {\n    node.status({ fill: 'red', shape: 'ring', text: 'số đo không hợp lệ' });\n    node.warn('feeder/level: level không phải số: ' + JSON.stringify(msg.payload));\n    return null;\n}\nif (level < 0 || level > 100) {\n    node.status({ fill: 'red', shape: 'ring', text: 'ngoài 0..100: ' + level });\n    node.warn('feeder/level: level ngoài 0..100: ' + level);\n    return null;\n}\nconst muc = Math.round(level);\nconst ts = Date.now();\n// ID 6 và các tab khác đọc mức mới nhất từ đây, không cần đợi Supabase.\nglobal.set('muc_moi_nhat', { level: muc, ts });\n\nconst p = phan_gio(ts);\nconst gio = p.hour + ':' + p.minute + ':' + p.second;\nnode.status({ fill: 'green', shape: 'dot', text: muc + ' % lúc ' + gio });\n\nconst hop_le = { payload: { level: muc, distance_cm: msg.payload.distance_cm }, topic: 'feeder/level' };\nreturn [{ payload: muc }, { payload: gio }, hop_le];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 120,
+    "wires": [
+      [
+        "7a1c000000001005"
+      ],
+      [
+        "7a1c000000001006"
+      ],
+      [
+        "7a1c000000001007"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000001005",
+    "type": "ui-gauge",
+    "z": "7a1c000000001000",
+    "name": "Gauge mức thức ăn",
+    "group": "7a1c000000001001",
+    "order": 1,
+    "width": 6,
+    "height": 4,
+    "gtype": "gauge-half",
+    "gstyle": "rounded",
+    "title": "Mức thức ăn",
+    "alwaysShowTitle": false,
+    "floatingTitlePosition": "top-left",
+    "units": "%",
+    "icon": "",
+    "prefix": "",
+    "suffix": "%",
+    "segments": [
+      {
+        "from": 0,
+        "color": "#e5484d"
+      },
+      {
+        "from": 20,
+        "color": "#f76b15"
+      },
+      {
+        "from": 50,
+        "color": "#30a46c"
+      }
+    ],
+    "min": 0,
+    "max": 100,
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 600,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000001006",
+    "type": "ui-text",
+    "z": "7a1c000000001000",
+    "group": "7a1c000000001001",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "name": "Cập nhật lúc",
+    "label": "Cập nhật lúc",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#717171",
+    "wrapText": false,
+    "className": "",
+    "value": "payload",
+    "valueType": "msg",
+    "x": 590,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000001007",
+    "type": "link out",
+    "z": "7a1c000000001000",
+    "name": "ID1 mức hợp lệ",
+    "mode": "link",
+    "links": [
+      "7a1c000000003002"
+    ],
+    "x": 595,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000003000",
+    "type": "tab",
+    "label": "ID 3 - Lưu Supabase",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "7a1c000000003003",
+    "type": "comment",
+    "z": "7a1c000000003000",
+    "name": "ID 3 - Ghi mức và lần cho ăn vào Supabase, hiện 10 dòng gần nhất (File do AI (Claude) sinh ngày 06/11/2026, Thuận đã đọc và chỉnh.)",
+    "info": "File do AI (Claude) sinh ngày 06/11/2026, Thuận đã đọc và chỉnh.\nBảng feeder_events (supabase/schema.sql). created_at do DB tự điền.\nMức: nhận từ ID 1 qua link, ghi tối đa 1 dòng / 2 phút.\nCho ăn: feeder/status có result = \"done\".\nKey lấy từ SUPABASE_URL, SUPABASE_KEY.",
+    "x": 420,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000003001",
+    "type": "ui-group",
+    "name": "Lịch sử đo và cho ăn",
+    "page": "1d2f00000000c003",
+    "width": 6,
+    "height": 1,
+    "order": 6,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default"
+  },
+  {
+    "id": "7a1c000000003002",
+    "type": "link in",
+    "z": "7a1c000000003000",
+    "name": "ID1 mức hợp lệ",
+    "links": [
+      "7a1c000000001007"
+    ],
+    "x": 125,
+    "y": 120,
+    "wires": [
+      [
+        "7a1c000000003004"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000003004",
+    "type": "function",
+    "z": "7a1c000000003000",
+    "name": "Gom mức (2 phút/lần)",
+    "func": "// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\nif (!url || !key) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa cấu hình Supabase' });\n    return null;\n}\n\n// ESP32 gửi 5 s/lần; ID 4 của Quân chỉ đọc tối đa 1000 dòng/24h,\n// 2 phút/lần = 720 dòng/ngày nên biểu đồ 24 giờ vẫn đủ dữ liệu.\nconst KHOANG_GHI_MS = 120 * 1000;\nconst bay_gio = Date.now();\nconst lan_ghi_cuoi = flow.get('lan_ghi_cuoi') || 0;\nif (bay_gio - lan_ghi_cuoi < KHOANG_GHI_MS) return null;\nflow.set('lan_ghi_cuoi', bay_gio);\n\nreturn {\n    loai_ghi: 'level',\n    method: 'POST',\n    url: url + '/rest/v1/feeder_events',\n    headers: {\n        apikey: key,\n        Authorization: 'Bearer ' + key,\n        'Content-Type': 'application/json',\n        Prefer: 'return=minimal'\n    },\n    payload: JSON.stringify({ event: 'level', level: msg.payload.level })\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 120,
+    "wires": [
+      [
+        "7a1c000000003006"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000003010",
+    "type": "mqtt in",
+    "z": "7a1c000000003000",
+    "name": "feeder/status",
+    "topic": "feeder/status",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "1d2f00000000b001",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 180,
+    "wires": [
+      [
+        "7a1c000000003005"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000003005",
+    "type": "function",
+    "z": "7a1c000000003000",
+    "name": "Ghi lần cho ăn",
+    "func": "// Chỉ ghi khi cửa đã đóng xong; opening/rejected không phải một lần cho ăn.\nconst s = msg.payload;\nif (!s || s.event !== 'feed' || s.result !== 'done') return null;\n\nconst thoi_gian = s.duration_ms;\nif (typeof thoi_gian !== 'number' || !Number.isFinite(thoi_gian) || thoi_gian <= 0) {\n    node.status({ fill: 'red', shape: 'ring', text: 'duration_ms sai' });\n    node.warn('feeder/status: duration_ms không hợp lệ: ' + JSON.stringify(s));\n    return null;\n}\n// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\nif (!url || !key) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa cấu hình Supabase' });\n    return null;\n}\nnode.status({});\nreturn {\n    loai_ghi: 'feed',\n    method: 'POST',\n    url: url + '/rest/v1/feeder_events',\n    headers: {\n        apikey: key,\n        Authorization: 'Bearer ' + key,\n        'Content-Type': 'application/json',\n        Prefer: 'return=minimal'\n    },\n    payload: JSON.stringify({ event: 'feed', duration_ms: Math.round(thoi_gian) })\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 180,
+    "wires": [
+      [
+        "7a1c000000003006"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000003006",
+    "type": "http request",
+    "z": "7a1c000000003000",
+    "name": "POST Supabase",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 560,
+    "y": 150,
+    "wires": [
+      [
+        "7a1c000000003007"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000003007",
+    "type": "function",
+    "z": "7a1c000000003000",
+    "name": "Kiểm tra ghi",
+    "func": "// Định dạng giờ theo múi Việt Nam, không phụ thuộc múi giờ của máy chạy Node-RED.\nfunction phan_gio(d) {\n    const p = {};\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Ho_Chi_Minh', hourCycle: 'h23',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit'\n    }).formatToParts(new Date(d)).forEach(x => { p[x.type] = x.value; });\n    return p;\n}\n\n// Supabase trả 201 khi chèn thành công (Prefer: return=minimal nên body rỗng).\nif (msg.statusCode === 201) {\n    const p = phan_gio(Date.now());\n    node.status({ fill: 'green', shape: 'dot', text: 'đã ghi ' + p.hour + ':' + p.minute });\n    // Ghi xong thì làm mới bảng lịch sử ngay.\n    return { payload: 'sau_khi_ghi' };\n}\n// Ghi mức lỗi thì bỏ mốc thời gian để số đo kế tiếp thử ghi lại, không phải đợi 2 phút.\nif (msg.loai_ghi === 'level') flow.set('lan_ghi_cuoi', 0);\nnode.status({ fill: 'red', shape: 'ring', text: 'lỗi ' + (msg.statusCode || 'mạng') });\nnode.warn('Ghi Supabase (' + msg.loai_ghi + ') thất bại: ' + (msg.statusCode || 'lỗi mạng') + ' ' + (msg.payload || ''));\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 760,
+    "y": 150,
+    "wires": [
+      [
+        "7a1c000000003009"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000003008",
+    "type": "inject",
+    "z": "7a1c000000003000",
+    "name": "Mỗi 60 giây",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 260,
+    "wires": [
+      [
+        "7a1c000000003009"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000003009",
+    "type": "function",
+    "z": "7a1c000000003000",
+    "name": "Tạo truy vấn lịch sử",
+    "func": "// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\nif (!url || !key) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa cấu hình Supabase' });\n    return null;\n}\n\nconst q = 'select=created_at,event,level,duration_ms&order=created_at.desc&limit=10';\nreturn {\n    method: 'GET',\n    url: url + '/rest/v1/feeder_events?' + q,\n    headers: { apikey: key, Authorization: 'Bearer ' + key },\n    payload: null\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 260,
+    "wires": [
+      [
+        "7a1c00000000300a"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000300a",
+    "type": "http request",
+    "z": "7a1c000000003000",
+    "name": "GET lịch sử",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 570,
+    "y": 260,
+    "wires": [
+      [
+        "7a1c00000000300b"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000300b",
+    "type": "function",
+    "z": "7a1c000000003000",
+    "name": "Đổi sang dòng bảng",
+    "func": "// Định dạng giờ theo múi Việt Nam, không phụ thuộc múi giờ của máy chạy Node-RED.\nfunction phan_gio(d) {\n    const p = {};\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Ho_Chi_Minh', hourCycle: 'h23',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit'\n    }).formatToParts(new Date(d)).forEach(x => { p[x.type] = x.value; });\n    return p;\n}\n\nif (msg.statusCode !== 200 || !Array.isArray(msg.payload)) {\n    // Giữ nguyên bảng cũ thay vì xóa trắng khi mất mạng.\n    node.status({ fill: 'red', shape: 'ring', text: 'lỗi ' + (msg.statusCode || 'dữ liệu') });\n    node.warn('Đọc lịch sử Supabase thất bại: ' + (msg.statusCode || 'dữ liệu sai'));\n    return null;\n}\nconst dong = msg.payload.map(r => {\n    const p = phan_gio(r.created_at);\n    const la_muc = r.event === 'level';\n    return {\n        thoi_gian: p.day + '/' + p.month + ' ' + p.hour + ':' + p.minute,\n        su_kien: la_muc ? 'Đo mức' : 'Cho ăn',\n        gia_tri: la_muc ? r.level + ' %' : (r.duration_ms / 1000).toFixed(1) + ' s'\n    };\n});\nnode.status({ fill: 'green', shape: 'dot', text: dong.length + ' dòng' });\nreturn { payload: dong, action: 'replace' };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 780,
+    "y": 260,
+    "wires": [
+      [
+        "7a1c00000000300c"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000300c",
+    "type": "ui-table",
+    "z": "7a1c000000003000",
+    "group": "7a1c000000003001",
+    "name": "Bảng lịch sử",
+    "label": "",
+    "order": 1,
+    "width": 6,
+    "height": 0,
+    "maxrows": 0,
+    "passthru": false,
+    "autocols": false,
+    "showSearch": false,
+    "deselect": true,
+    "selectionType": "none",
+    "columns": [
+      {
+        "title": "Thời gian",
+        "key": "thoi_gian",
+        "keyType": "key",
+        "type": "text",
+        "width": "",
+        "align": "start"
+      },
+      {
+        "title": "Sự kiện",
+        "key": "su_kien",
+        "keyType": "key",
+        "type": "text",
+        "width": "",
+        "align": "start"
+      },
+      {
+        "title": "Giá trị",
+        "key": "gia_tri",
+        "keyType": "key",
+        "type": "text",
+        "width": "",
+        "align": "end"
+      }
+    ],
+    "mobileBreakpoint": "sm",
+    "mobileBreakpointType": "defaults",
+    "action": "replace",
+    "className": "",
+    "x": 990,
+    "y": 260,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "7a1c000000006000",
+    "type": "tab",
+    "label": "ID 6 - Email 20:00",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "7a1c000000006001",
+    "type": "comment",
+    "z": "7a1c000000006000",
+    "name": "ID 6 - 20:00 mỗi ngày gửi email báo cáo qua Gmail SMTP (File do AI (Claude) sinh ngày 06/11/2026, Thuận đã đọc và chỉnh.)",
+    "info": "File do AI (Claude) sinh ngày 06/11/2026, Thuận đã đọc và chỉnh.\nĐọc mức mới nhất và các lần cho ăn hôm nay từ Supabase rồi gửi tới EMAIL_TO.\nTài khoản Gmail + App Password điền trong node \"Gmail SMTP\" (lưu vào flows_cred.json, không lên git).\nNút \"Gửi thử email\" gửi ngay, bỏ qua công tắc.",
+    "x": 400,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000006002",
+    "type": "inject",
+    "z": "7a1c000000006000",
+    "name": "Mặc định bật",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.5",
+    "topic": "",
+    "payload": "true",
+    "payloadType": "bool",
+    "x": 140,
+    "y": 100,
+    "wires": [
+      [
+        "7a1c000000006003",
+        "7a1c000000006004"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000006003",
+    "type": "ui-switch",
+    "z": "7a1c000000006000",
+    "name": "Công tắc email",
+    "label": "Email báo cáo hằng ngày 20:00",
+    "group": "1d2f000000005001",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "passthru": false,
+    "decouple": false,
+    "topic": "topic",
+    "topicType": "msg",
+    "style": "",
+    "className": "",
+    "layout": "row-spread",
+    "clickableArea": "switch",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "",
+    "offcolor": "",
+    "x": 350,
+    "y": 100,
+    "wires": [
+      [
+        "7a1c000000006004"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000006004",
+    "type": "change",
+    "z": "7a1c000000006000",
+    "name": "Lưu công tắc",
+    "rules": [
+      {
+        "t": "set",
+        "p": "email_bat",
+        "pt": "flow",
+        "to": "payload",
+        "tot": "msg"
+      }
+    ],
+    "x": 560,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "7a1c000000006005",
+    "type": "inject",
+    "z": "7a1c000000006000",
+    "name": "20:00 mỗi ngày (giờ máy chủ)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "00 20 * * *",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "hang_ngay",
+    "payloadType": "str",
+    "x": 170,
+    "y": 180,
+    "wires": [
+      [
+        "7a1c000000006007"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000006006",
+    "type": "ui-button",
+    "z": "7a1c000000006000",
+    "group": "1d2f000000005001",
+    "name": "Nút gửi thử email",
+    "label": "Gửi thử email",
+    "order": 3,
+    "width": 0,
+    "height": 0,
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "email-fast",
+    "iconPosition": "left",
+    "payload": "gui_thu",
+    "payloadType": "str",
+    "topic": "topic",
+    "topicType": "msg",
+    "buttonColor": "",
+    "textColor": "",
+    "iconColor": "",
+    "enableClick": true,
+    "enablePointerdown": false,
+    "pointerdownPayload": "",
+    "pointerdownPayloadType": "str",
+    "enablePointerup": false,
+    "pointerupPayload": "",
+    "pointerupPayloadType": "str",
+    "x": 160,
+    "y": 240,
+    "wires": [
+      [
+        "7a1c000000006007"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000006013",
+    "type": "comment",
+    "z": "7a1c000000006000",
+    "name": "Cron dùng giờ máy chủ: laptop chạy Node-RED phải đặt múi giờ Asia/Ho_Chi_Minh",
+    "info": "Node-RED chạy crontab \"00 20 * * *\" theo giờ hệ thống của máy, không theo múi giờ trong flow.",
+    "x": 330,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000006007",
+    "type": "function",
+    "z": "7a1c000000006000",
+    "name": "Hỏi mức mới nhất",
+    "func": "// Nút gửi thử bỏ qua công tắc để kiểm tra cấu hình bất cứ lúc nào.\nconst gui_thu = msg.payload === 'gui_thu';\nif (!gui_thu && flow.get('email_bat') === false) {\n    node.status({ fill: 'grey', shape: 'ring', text: 'công tắc tắt, không gửi' });\n    return null;\n}\nif (!env.get('EMAIL_TO')) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa đặt EMAIL_TO' });\n    return null;\n}\n// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\nif (!url || !key) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa cấu hình Supabase' });\n    return null;\n}\nnode.status({});\nreturn {\n    method: 'GET',\n    url: url + '/rest/v1/feeder_events?select=created_at,level&event=eq.level&order=created_at.desc&limit=1',\n    headers: { apikey: key, Authorization: 'Bearer ' + key },\n    payload: null\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 210,
+    "wires": [
+      [
+        "7a1c000000006008"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000006008",
+    "type": "http request",
+    "z": "7a1c000000006000",
+    "name": "GET mức mới nhất",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 630,
+    "y": 210,
+    "wires": [
+      [
+        "7a1c000000006009"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000006009",
+    "type": "function",
+    "z": "7a1c000000006000",
+    "name": "Lưu mức, hỏi cho ăn hôm nay",
+    "func": "if (msg.statusCode !== 200 || !Array.isArray(msg.payload)) {\n    // Không có số liệu thật thì không gửi email để tránh báo sai.\n    node.status({ fill: 'red', shape: 'ring', text: 'lỗi ' + (msg.statusCode || 'mạng') });\n    node.warn('Email 20:00: đọc mức thất bại: ' + (msg.statusCode || 'lỗi mạng'));\n    return null;\n}\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\n\n// Nửa đêm hôm nay theo giờ Việt Nam, đổi ra UTC cho Supabase.\n// Việt Nam cố định UTC+7, không có giờ mùa hè.\nconst ngay_vn = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });\nconst nua_dem = new Date(ngay_vn + 'T00:00:00+07:00').toISOString();\nnode.status({});\nreturn {\n    muc_moi_nhat: msg.payload[0] || null,\n    method: 'GET',\n    url: url + '/rest/v1/feeder_events?event=eq.feed&created_at=gte.' + encodeURIComponent(nua_dem)\n        + '&select=created_at,duration_ms&order=created_at.asc',\n    headers: { apikey: key, Authorization: 'Bearer ' + key },\n    payload: null\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 870,
+    "y": 210,
+    "wires": [
+      [
+        "7a1c00000000600a"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000600a",
+    "type": "http request",
+    "z": "7a1c000000006000",
+    "name": "GET cho ăn hôm nay",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 420,
+    "y": 300,
+    "wires": [
+      [
+        "7a1c00000000600b"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000600b",
+    "type": "function",
+    "z": "7a1c000000006000",
+    "name": "Soạn email",
+    "func": "// Định dạng giờ theo múi Việt Nam, không phụ thuộc múi giờ của máy chạy Node-RED.\nfunction phan_gio(d) {\n    const p = {};\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Ho_Chi_Minh', hourCycle: 'h23',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit'\n    }).formatToParts(new Date(d)).forEach(x => { p[x.type] = x.value; });\n    return p;\n}\n\nif (msg.statusCode !== 200 || !Array.isArray(msg.payload)) {\n    node.status({ fill: 'red', shape: 'ring', text: 'lỗi ' + (msg.statusCode || 'mạng') });\n    node.warn('Email 20:00: đọc lịch sử cho ăn thất bại: ' + (msg.statusCode || 'lỗi mạng'));\n    return null;\n}\nconst NGUONG = 20;   // cùng ngưỡng sắp hết với ID 5\nconst muc = msg.muc_moi_nhat;\nconst hom_nay = phan_gio(Date.now());\nconst feeds = msg.payload;\n\nconst dong = [];\nif (muc) {\n    const p = phan_gio(muc.created_at);\n    dong.push('Mức thức ăn hiện tại: ' + muc.level + ' % (đo lúc ' + p.hour + ':' + p.minute + ').');\n} else {\n    dong.push('Mức thức ăn hiện tại: chưa có dữ liệu.');\n}\ndong.push('Số lần cho ăn hôm nay: ' + feeds.length + '.');\nfeeds.forEach((f, i) => {\n    const p = phan_gio(f.created_at);\n    dong.push('  ' + (i + 1) + '. ' + p.hour + ':' + p.minute + ' - mở cửa ' + (f.duration_ms / 1000).toFixed(1) + ' s');\n});\nif (muc && muc.level < NGUONG) {\n    dong.push('');\n    dong.push('CẢNH BÁO: thức ăn còn dưới ' + NGUONG + ' %, hãy châm thêm.');\n}\ndong.push('');\ndong.push('Email tự động từ hộp cho thú cưng ăn (Node-RED).');\n\nnode.status({ fill: 'green', shape: 'dot', text: 'đã soạn, đang gửi' });\n// Tạo msg mới: không mang msg.headers của Supabase (có key) sang node email.\nreturn {\n    to: env.get('EMAIL_TO'),\n    topic: 'Báo cáo hộp cho ăn ngày ' + hom_nay.day + '/' + hom_nay.month + '/' + hom_nay.year,\n    payload: dong.join('\\n')\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 630,
+    "y": 300,
+    "wires": [
+      [
+        "7a1c00000000600c"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000600c",
+    "type": "e-mail",
+    "z": "7a1c000000006000",
+    "server": "smtp.gmail.com",
+    "port": "465",
+    "authtype": "BASIC",
+    "saslformat": true,
+    "token": "oauth2Response.access_token",
+    "secure": true,
+    "tls": true,
+    "name": "",
+    "dname": "Gmail SMTP",
+    "x": 850,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "7a1c00000000600d",
+    "type": "status",
+    "z": "7a1c000000006000",
+    "name": "Trạng thái email",
+    "scope": [
+      "7a1c00000000600c"
+    ],
+    "x": 160,
+    "y": 380,
+    "wires": [
+      [
+        "7a1c00000000600f"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000600e",
+    "type": "catch",
+    "z": "7a1c000000006000",
+    "name": "Lỗi email",
+    "scope": [
+      "7a1c00000000600c"
+    ],
+    "uncaught": false,
+    "x": 140,
+    "y": 420,
+    "wires": [
+      [
+        "7a1c00000000600f"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c00000000600f",
+    "type": "function",
+    "z": "7a1c000000006000",
+    "name": "Kết quả gửi email",
+    "func": "// Định dạng giờ theo múi Việt Nam, không phụ thuộc múi giờ của máy chạy Node-RED.\nfunction phan_gio(d) {\n    const p = {};\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Ho_Chi_Minh', hourCycle: 'h23',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit'\n    }).formatToParts(new Date(d)).forEach(x => { p[x.type] = x.value; });\n    return p;\n}\n\n// Node email không có đầu ra, nên đọc kết quả qua node status / catch.\nif (msg.error) {\n    node.status({ fill: 'red', shape: 'ring', text: 'gửi email thất bại' });\n    node.warn('Gửi email thất bại: ' + (msg.error.message || msg.error));\n    return null;\n}\nconst s = msg.status || {};\nif (s.fill === 'red') {\n    node.status({ fill: 'red', shape: 'ring', text: 'gửi email thất bại' });\n    return null;\n}\n// Gửi xong node email đặt status rỗng kèm phản hồi của máy chủ SMTP.\nif (!s.fill && s.response) {\n    const p = phan_gio(Date.now());\n    node.status({ fill: 'green', shape: 'dot', text: 'đã gửi ' + p.hour + ':' + p.minute });\n}\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 400,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "7a1c000000007000",
+    "type": "tab",
+    "label": "ID 7 - Đăng nhập",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "7a1c000000007002",
+    "type": "comment",
+    "z": "7a1c000000007000",
+    "name": "ID 7 - Đăng ký / đăng nhập / đăng xuất, người dùng lưu SQLite (file do AI (Claude) sinh 06/11/2026)",
+    "info": "File do AI (Claude) sinh ngày 06/11/2026, Thuận đã đọc và chỉnh.\n\nĐăng ký / đăng nhập / đăng xuất. Người dùng lưu ở SQLite (bảng users), mật khẩu băm bằng scrypt + muối ngẫu nhiên 16 byte, không lưu mật khẩu gốc.\n\nFile CSDL: users.db, đường dẫn tương đối nên nằm ở thư mục làm việc của tiến trình Node-RED (chạy start.ps1 từ thư mục gốc repo thì là smartpetfeeder/users.db). Không đưa file này lên git.\n\nPhiên: flow context \"phien\" = { socketId: { ten, luc } }. Đăng nhập đúng thì ghi phiên cho đúng socket đó; vào trang khác trang Đăng nhập mà không có phiên thì bị chuyển về Đăng nhập; mất kết nối thì xoá phiên.\n\nLưu ý trung thực: đây chỉ là kiểm soát truy cập ở mức giao diện cho đồ án. F5 (tải lại trang) tạo socket mới nên phải đăng nhập lại. Không thay cho xác thực HTTP thật: ai gọi thẳng socket hoặc API của Node-RED vẫn không bị chặn; muốn bảo vệ thật cần httpNodeAuth / adminAuth trong settings.js hoặc FlowFuse.",
+    "x": 400,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000007003",
+    "type": "ui-page",
+    "name": "Đăng nhập",
+    "ui": "1d2f00000000c001",
+    "path": "/login",
+    "icon": "login",
+    "layout": "grid",
+    "theme": "1d2f00000000c002",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": 0,
+        "cols": 3
+      },
+      {
+        "name": "Tablet",
+        "px": 576,
+        "cols": 6
+      },
+      {
+        "name": "Small Desktop",
+        "px": 768,
+        "cols": 9
+      },
+      {
+        "name": "Desktop",
+        "px": 1024,
+        "cols": 12
+      }
+    ],
+    "order": 1,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "7a1c000000007004",
+    "type": "ui-group",
+    "name": "Đăng nhập",
+    "page": "7a1c000000007003",
+    "width": 6,
+    "height": 1,
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default"
+  },
+  {
+    "id": "7a1c000000007005",
+    "type": "ui-group",
+    "name": "Đăng ký mới",
+    "page": "7a1c000000007003",
+    "width": 6,
+    "height": 1,
+    "order": 2,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default"
+  },
+  {
+    "id": "7a1c000000007001",
+    "type": "ui-group",
+    "name": "Tài khoản",
+    "page": "1d2f00000000c003",
+    "width": 12,
+    "height": 1,
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false,
+    "groupType": "default"
+  },
+  {
+    "id": "7a1c000000007006",
+    "type": "sqlitedb",
+    "db": "users.db",
+    "mode": "RWC"
+  },
+  {
+    "id": "7a1c000000007010",
+    "type": "inject",
+    "z": "7a1c000000007000",
+    "name": "Khởi động",
+    "props": [],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.1,
+    "topic": "",
+    "x": 130,
+    "y": 100,
+    "wires": [
+      [
+        "7a1c000000007011"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007011",
+    "type": "sqlite",
+    "z": "7a1c000000007000",
+    "mydb": "7a1c000000007006",
+    "sqlquery": "fixed",
+    "sql": "CREATE TABLE IF NOT EXISTS users (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  ten_dang_nhap TEXT UNIQUE NOT NULL,\n  mat_khau_hash TEXT NOT NULL,\n  muoi TEXT NOT NULL,\n  tao_luc TEXT NOT NULL\n)",
+    "name": "Tạo bảng users",
+    "x": 330,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "7a1c000000007020",
+    "type": "ui-form",
+    "z": "7a1c000000007000",
+    "name": "Form đăng ký",
+    "group": "7a1c000000007005",
+    "label": "",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "options": [
+      {
+        "label": "Tên đăng nhập",
+        "key": "ten_dang_nhap",
+        "type": "text",
+        "required": true,
+        "rows": null
+      },
+      {
+        "label": "Mật khẩu",
+        "key": "mat_khau",
+        "type": "password",
+        "required": true,
+        "rows": null
+      }
+    ],
+    "formValue": {
+      "ten_dang_nhap": "",
+      "mat_khau": ""
+    },
+    "payload": "",
+    "submit": "Đăng ký",
+    "cancel": "Xoá",
+    "resetOnSubmit": true,
+    "topic": "topic",
+    "topicType": "msg",
+    "splitLayout": "",
+    "className": "",
+    "passthru": false,
+    "dropdownOptions": [],
+    "x": 130,
+    "y": 180,
+    "wires": [
+      [
+        "7a1c000000007021"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007021",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "Kiểm tra và băm mật khẩu",
+    "func": "// Chỉ trả lời về đúng trình duyệt gửi form (msg._client), không thì sẽ phát cho mọi người.\nconst khach = msg._client;\nif (!khach || !khach.socketId) {\n    node.status({ fill: 'red', shape: 'dot', text: 'thiếu _client' });\n    node.warn('Thiếu msg._client: bật \"Include client data\" ở ui-base');\n    return null;\n}\nconst tra_loi = (chu) => ({ _client: khach, payload: chu });\n\nconst vao = msg.payload || {};\nconst ten = String(vao.ten_dang_nhap || '').trim();\nconst mat_khau = String(vao.mat_khau || '');\nif (!/^[A-Za-z0-9_]{3,32}$/.test(ten)) {\n    return [null, tra_loi('Tên đăng nhập 3-32 ký tự, chỉ gồm chữ, số và dấu _')];\n}\nif (mat_khau.length < 6) {\n    return [null, tra_loi('Mật khẩu phải có ít nhất 6 ký tự')];\n}\n\n// scrypt chạy bất đồng bộ để không chặn Node-RED. Mật khẩu gốc không đi tiếp sang node sau.\nconst muoi = crypto.randomBytes(16);\ncrypto.scrypt(mat_khau, muoi, 64, (loi, khoa) => {\n    if (loi) {\n        node.status({ fill: 'red', shape: 'dot', text: 'lỗi băm' });\n        node.warn('Không băm được mật khẩu: ' + loi.message);\n        node.send([null, tra_loi('Lỗi máy chủ, thử lại sau')]);\n        node.done();\n        return;\n    }\n    node.status({});\n    node.send([{\n        _client: khach,\n        ten_dang_nhap: ten,\n        // Truy vấn có tham số, không ghép chuỗi từ dữ liệu người dùng.\n        params: { $ten: ten, $hash: khoa.toString('hex'), $muoi: muoi.toString('hex'), $luc: new Date().toISOString() }\n    }, null]);\n    node.done();\n});\nreturn null;",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "crypto",
+        "module": "crypto"
+      }
+    ],
+    "x": 340,
+    "y": 180,
+    "wires": [
+      [
+        "7a1c000000007022"
+      ],
+      [
+        "7a1c000000007070"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007022",
+    "type": "sqlite",
+    "z": "7a1c000000007000",
+    "mydb": "7a1c000000007006",
+    "sqlquery": "prepared",
+    "sql": "INSERT INTO users (ten_dang_nhap, mat_khau_hash, muoi, tao_luc) VALUES ($ten, $hash, $muoi, $luc)",
+    "name": "Thêm user",
+    "x": 560,
+    "y": 160,
+    "wires": [
+      [
+        "7a1c000000007023"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007023",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "Đăng ký xong",
+    "func": "// INSERT thành công (sqlite trả mảng rỗng).\nreturn { _client: msg._client, payload: 'Đã tạo tài khoản ' + msg.ten_dang_nhap + ', mời đăng nhập' };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 740,
+    "y": 160,
+    "wires": [
+      [
+        "7a1c000000007070"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007030",
+    "type": "ui-form",
+    "z": "7a1c000000007000",
+    "name": "Form đăng nhập",
+    "group": "7a1c000000007004",
+    "label": "",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "options": [
+      {
+        "label": "Tên đăng nhập",
+        "key": "ten_dang_nhap",
+        "type": "text",
+        "required": true,
+        "rows": null
+      },
+      {
+        "label": "Mật khẩu",
+        "key": "mat_khau",
+        "type": "password",
+        "required": true,
+        "rows": null
+      }
+    ],
+    "formValue": {
+      "ten_dang_nhap": "",
+      "mat_khau": ""
+    },
+    "payload": "",
+    "submit": "Đăng nhập",
+    "cancel": "Xoá",
+    "resetOnSubmit": true,
+    "topic": "topic",
+    "topicType": "msg",
+    "splitLayout": "",
+    "className": "",
+    "passthru": false,
+    "dropdownOptions": [],
+    "x": 130,
+    "y": 280,
+    "wires": [
+      [
+        "7a1c000000007031"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007031",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "Kiểm tra form đăng nhập",
+    "func": "const khach = msg._client;\nif (!khach || !khach.socketId) {\n    node.status({ fill: 'red', shape: 'dot', text: 'thiếu _client' });\n    node.warn('Thiếu msg._client: bật \"Include client data\" ở ui-base');\n    return null;\n}\nconst vao = msg.payload || {};\nconst ten = String(vao.ten_dang_nhap || '').trim();\nconst mat_khau = String(vao.mat_khau || '');\nif (!ten || !mat_khau) {\n    return [null, { _client: khach, payload: 'Nhập tên đăng nhập và mật khẩu' }];\n}\n// Mật khẩu phải đi qua node sqlite để so với hash; node sau xoá ngay, không ghi log.\nreturn [{ _client: khach, ten_dang_nhap: ten, mat_khau_tam: mat_khau, params: { $ten: ten } }, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 280,
+    "wires": [
+      [
+        "7a1c000000007032"
+      ],
+      [
+        "7a1c000000007070"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007032",
+    "type": "sqlite",
+    "z": "7a1c000000007000",
+    "mydb": "7a1c000000007006",
+    "sqlquery": "prepared",
+    "sql": "SELECT ten_dang_nhap, mat_khau_hash, muoi FROM users WHERE ten_dang_nhap = $ten LIMIT 1",
+    "name": "Tìm user",
+    "x": 550,
+    "y": 260,
+    "wires": [
+      [
+        "7a1c000000007033"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007033",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "So mật khẩu, ghi phiên",
+    "func": "// Tên trang phải trùng tên ui-page (ui-control tìm trang theo tên).\nconst TRANG_CHINH = 'Dashboard';\n\nconst mat_khau = String(msg.mat_khau_tam || '');\ndelete msg.mat_khau_tam;\nconst khach = msg._client;\nconst dong = Array.isArray(msg.payload) ? msg.payload[0] : null;\nconst sai = { _client: khach, payload: 'Sai tên đăng nhập hoặc mật khẩu' };\n\n// Không có user vẫn băm với muối giả để thời gian trả lời gần như nhau,\n// tránh dò xem tên nào đã tồn tại.\nconst muoi = dong ? Buffer.from(dong.muoi, 'hex') : crypto.randomBytes(16);\ncrypto.scrypt(mat_khau, muoi, 64, (loi, khoa) => {\n    if (loi) {\n        node.status({ fill: 'red', shape: 'dot', text: 'lỗi băm' });\n        node.warn('Không băm được mật khẩu: ' + loi.message);\n        node.send([null, null, { _client: khach, payload: 'Lỗi máy chủ, thử lại sau' }]);\n        node.done();\n        return;\n    }\n    const luu = dong ? Buffer.from(dong.mat_khau_hash, 'hex') : null;\n    // timingSafeEqual báo lỗi nếu khác độ dài nên kiểm tra trước.\n    const dung = !!luu && luu.length === khoa.length && crypto.timingSafeEqual(luu, khoa);\n    if (!dung) {\n        node.send([null, null, sai]);\n        node.done();\n        return;\n    }\n    const phien = flow.get('phien') || {};\n    phien[khach.socketId] = { ten: dong.ten_dang_nhap, luc: new Date().toISOString() };\n    flow.set('phien', phien);\n    node.status({ fill: 'green', shape: 'dot', text: Object.keys(phien).length + ' phiên' });\n    node.send([\n        { _client: khach, payload: { page: TRANG_CHINH } },\n        { _client: khach, payload: { ten: dong.ten_dang_nhap } },\n        { _client: khach, payload: 'Xin chào ' + dong.ten_dang_nhap }\n    ]);\n    node.done();\n});\nreturn null;",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "crypto",
+        "module": "crypto"
+      }
+    ],
+    "x": 740,
+    "y": 260,
+    "wires": [
+      [
+        "7a1c000000007060"
+      ],
+      [
+        "7a1c000000007050"
+      ],
+      [
+        "7a1c000000007070"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007080",
+    "type": "catch",
+    "z": "7a1c000000007000",
+    "name": "Lỗi SQLite",
+    "scope": [
+      "7a1c000000007011",
+      "7a1c000000007022",
+      "7a1c000000007032"
+    ],
+    "uncaught": false,
+    "x": 540,
+    "y": 340,
+    "wires": [
+      [
+        "7a1c000000007081"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007081",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "Báo lỗi SQLite",
+    "func": "// Lỗi từ các node sqlite (node sqlite chỉ báo lỗi qua catch, không ra cổng output).\n// Không ghi cả msg ra log vì msg đăng nhập có mật khẩu tạm.\ndelete msg.mat_khau_tam;\nconst SQL_THEM_ID = '7a1c000000007022';\nconst thong_bao = (msg.error && msg.error.message) || '';\nconst nguon = msg.error && msg.error.source && msg.error.source.id;\nconst khach = msg._client;\n\nif (nguon === SQL_THEM_ID && thong_bao.includes('UNIQUE')) {\n    return khach ? { _client: khach, payload: 'Tên đăng nhập đã có người dùng' } : null;\n}\nnode.status({ fill: 'red', shape: 'dot', text: 'lỗi SQLite' });\nnode.warn('Lỗi SQLite: ' + thong_bao);\n// Lỗi lúc tạo bảng không có _client: không gửi thông báo, nếu không sẽ hiện cho mọi người.\nreturn khach ? { _client: khach, payload: 'Lỗi cơ sở dữ liệu, thử lại sau' } : null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 740,
+    "y": 340,
+    "wires": [
+      [
+        "7a1c000000007070"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007040",
+    "type": "ui-event",
+    "z": "7a1c000000007000",
+    "ui": "1d2f00000000c001",
+    "name": "Đổi trang",
+    "x": 120,
+    "y": 420,
+    "wires": [
+      [
+        "7a1c000000007041"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007041",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "Kiểm tra phiên",
+    "func": "// ui-event gửi { topic: '$pageview', payload: { page: { id, name, path, ... }, query } }.\nconst TRANG_DANG_NHAP_ID = '7a1c000000007003';\nconst TRANG_DANG_NHAP = 'Đăng nhập';\n\nif (msg.topic !== '$pageview') return null;\nconst socket_id = msg._client && msg._client.socketId;\nif (!socket_id) return null;\nconst trang = (msg.payload && msg.payload.page) || {};\nif (trang.id === TRANG_DANG_NHAP_ID) return null;\n\nconst phien = flow.get('phien') || {};\nif (phien[socket_id]) return null;\n// Chưa đăng nhập mà vào trang khác: chỉ chuyển trình duyệt này.\nreturn { _client: msg._client, payload: { page: TRANG_DANG_NHAP } };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 420,
+    "wires": [
+      [
+        "7a1c000000007060"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007050",
+    "type": "ui-template",
+    "z": "7a1c000000007000",
+    "group": "7a1c000000007001",
+    "page": "",
+    "ui": "",
+    "name": "Người dùng + Đăng xuất",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "format": "<template>\n  <div class=\"tai_khoan\">\n    <span v-if=\"ten\">Người dùng: <b>{{ ten }}</b></span>\n    <span v-else class=\"chua\">Chưa đăng nhập</span>\n    <button v-if=\"ten\" type=\"button\" @click=\"dang_xuat\">Đăng xuất</button>\n  </div>\n</template>\n\n<script>\nexport default {\n  data() {\n    return { ten: '' }\n  },\n  watch: {\n    // Node-RED trả { ten: '...' } hoặc { ten: null } cho đúng trình duyệt này.\n    msg(m) {\n      if (!m || !m.payload || typeof m.payload !== 'object' || !('ten' in m.payload)) return\n      this.ten = m.payload.ten || ''\n    }\n  },\n  mounted() {\n    // Tin gửi riêng từng trình duyệt không được lưu lại, nên khi hiện ra phải tự hỏi tên.\n    this.send({ payload: { hanh_dong: 'hoi_ten' } })\n  },\n  methods: {\n    dang_xuat() {\n      this.send({ payload: { hanh_dong: 'dang_xuat' } })\n    }\n  }\n}\n</script>\n\n<style scoped>\n.tai_khoan { display: flex; align-items: center; justify-content: space-between; gap: 12px; }\n.chua { color: #717171; }\n.tai_khoan button { padding: 8px 16px; border: 0; border-radius: 4px; background: #0d74ce; color: #fff; cursor: pointer; }\n</style>",
+    "storeOutMessages": false,
+    "passthru": false,
+    "resendOnRefresh": false,
+    "templateScope": "local",
+    "className": "",
+    "x": 150,
+    "y": 500,
+    "wires": [
+      [
+        "7a1c000000007051"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007051",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "Hỏi tên / đăng xuất",
+    "func": "// ui-template gửi { hanh_dong: 'hoi_ten' } khi hiện ra, { hanh_dong: 'dang_xuat' } khi bấm nút.\nconst TRANG_DANG_NHAP = 'Đăng nhập';\n\nconst khach = msg._client;\nconst socket_id = khach && khach.socketId;\nif (!socket_id) return null;\nconst hanh_dong = msg.payload && msg.payload.hanh_dong;\nconst phien = flow.get('phien') || {};\n\nif (hanh_dong === 'hoi_ten') {\n    const p = phien[socket_id];\n    return [null, { _client: khach, payload: { ten: p ? p.ten : null } }];\n}\nif (hanh_dong === 'dang_xuat') {\n    delete phien[socket_id];\n    flow.set('phien', phien);\n    node.status({ fill: 'grey', shape: 'ring', text: Object.keys(phien).length + ' phiên' });\n    return [\n        { _client: khach, payload: { page: TRANG_DANG_NHAP } },\n        { _client: khach, payload: { ten: null } }\n    ];\n}\nreturn null;",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 500,
+    "wires": [
+      [
+        "7a1c000000007060"
+      ],
+      [
+        "7a1c000000007050"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007060",
+    "type": "ui-control",
+    "z": "7a1c000000007000",
+    "name": "Chuyển trang",
+    "ui": "1d2f00000000c001",
+    "events": "connect",
+    "x": 1000,
+    "y": 420,
+    "wires": [
+      [
+        "7a1c000000007061"
+      ]
+    ]
+  },
+  {
+    "id": "7a1c000000007061",
+    "type": "function",
+    "z": "7a1c000000007000",
+    "name": "Xoá phiên khi ngắt",
+    "func": "// ui-control (events = connect) gửi payload 'connect' / 'lost' kèm msg._client.socketId.\nif (msg.payload !== 'lost') return null;\nconst socket_id = msg._client && msg._client.socketId;\nif (!socket_id) return null;\nconst phien = flow.get('phien') || {};\nif (phien[socket_id]) {\n    delete phien[socket_id];\n    flow.set('phien', phien);\n}\nnode.status({ fill: 'grey', shape: 'ring', text: Object.keys(phien).length + ' phiên' });\nreturn null;",
+    "outputs": 0,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1190,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "7a1c000000007070",
+    "type": "ui-notification",
+    "z": "7a1c000000007000",
+    "ui": "1d2f00000000c001",
+    "position": "top right",
+    "colorDefault": true,
+    "color": "#000000",
+    "displayTime": "3",
+    "showCountdown": true,
+    "outputs": 1,
+    "allowDismiss": true,
+    "dismissText": "Đóng",
+    "allowConfirm": false,
+    "confirmText": "Xác nhận",
+    "raw": false,
+    "className": "",
+    "name": "Thông báo riêng",
+    "x": 1010,
+    "y": 220,
+    "wires": [
+      []
+    ]
+  }
+]
