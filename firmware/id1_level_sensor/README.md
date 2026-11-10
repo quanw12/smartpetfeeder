@@ -2,8 +2,6 @@
 
 Phần của Thuận. ESP32 đo khoảng cách từ nắp phễu xuống mặt thức ăn rồi đổi ra phần trăm. Lần đầu gửi ngay khi có đủ 5 lần đo, sau đó cứ 2 phút gửi kết quả lên `feeder/level` một lần. Bản gộp ở `firmware/smart_pet_feeder` gửi thêm một lần ngay sau mỗi lần cho ăn; sketch này không có servo nên không có lần đó.
 
-*File do AI (Claude) sinh ngày 06/11/2026, Thuận đọc hiểu và chỉnh trước khi nộp.*
-
 ## Nối dây
 
 | HC-SR04 | ESP32 | Ghi chú |

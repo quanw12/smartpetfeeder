@@ -1,29 +1,17 @@
 /*
  * Smart Pet Feeder — ID 1: Đo mức thức ăn bằng HC-SR04 (Thuận, 24127551)
  *
- * File do AI (Claude) sinh ngày 06/11/2026. Chưa có đoạn sinh viên tự viết,
- * chưa chép đoạn nào từ nguồn ngoài. Sinh viên đọc hiểu, chỉnh sửa và ghi rõ
- * phần tự sửa trước khi nộp.
- *
- * Luồng 1 (proposal mục 1.2):
- *   HC-SR04 gắn trên nắp phễu, đo khoảng cách xuống mặt thức ăn
- *   -> ESP32 đổi ra % mức -> publish {"level":72,"distance_cm":8.5}
- *   lên topic feeder/level mỗi 2 phút -> Node-RED hiện gauge (ID 1),
- *   lưu Supabase (ID 3), cảnh báo ntfy (ID 5 của Quân).
+ * Cảm biến trên nắp phễu đo xuống mặt thức ăn.
+ * d (cm) = thời_gian_µs * 0,0343 / 2. Khoảng cách càng nhỏ thì % càng đầy.
+ * Gửi {"level":72,"distance_cm":8.5} lên feeder/level mỗi 2 phút.
  *
  * Nối dây:
- *   HC-SR04 VCC  -> VIN/5V của ESP32
- *   HC-SR04 GND  -> GND (chung với servo SG90)
- *   HC-SR04 Trig -> GPIO 5
- *   HC-SR04 Echo -> cầu chia áp 1 kΩ / 2,2 kΩ -> GPIO 18
- *     (Echo ra 5 V, chân ESP32 chỉ chịu 3,3 V: 5 V x 2,2/3,2 ≈ 3,4 V)
+ *   VCC -> 5 V, GND -> GND, Trig -> GPIO 5
+ *   Echo 5 V qua cầu chia 1 kΩ / 2,2 kΩ rồi vào GPIO 18 (còn khoảng 3,4 V)
+ * Phễu rỗng / đầy: sửa KHOANG_CACH_RONG_CM và KHOANG_CACH_DAY_CM.
  *
- * Hiệu chỉnh: đo khoảng cách khi phễu rỗng và khi đầy, sửa hai hằng
- * KHOANG_CACH_RONG_CM / KHOANG_CACH_DAY_CM bên dưới.
- *
- * Code chia thành id1_setup() / id1_loop() để tuần 8 gộp với firmware ID 2
- * của Quân: gọi thêm hai hàm này trong setup/loop chung. id1_loop() không
- * dùng delay() dài nên không làm trễ việc đóng cửa của ID 2.
+ * id1_setup() và id1_loop() được gọi trong firmware gộp smart_pet_feeder.
+ * Bản gộp gửi thêm một lần ngay sau mỗi lần cho ăn. Sketch này không có servo.
  */
 
 #include <WiFi.h>

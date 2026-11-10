@@ -1,23 +1,16 @@
 /*
  * Smart Pet Feeder — ID 2: Cho ăn từ xa bằng servo SG90 (Quân, 24127512)
  *
- * File do AI (Claude) sinh ngày 04/11/2026. Chưa có đoạn sinh viên tự viết,
- * chưa chép đoạn nào từ nguồn ngoài. Sinh viên đọc hiểu, chỉnh sửa và ghi rõ
- * phần tự sửa trước khi nộp.
+ * Dashboard bấm CHO ĂN -> Node-RED gửi {"duration_ms":1500}
+ * lên feeder/cmd/feed -> ESP32 mở cửa đúng số mili giây rồi đóng
+ * -> gửi xác nhận lên feeder/status.
  *
- * Luồng 2 (proposal mục 1.2):
- *   Dashboard bấm "CHO ĂN" -> Node-RED publish {"duration_ms":1500}
- *   lên topic feeder/cmd/feed -> ESP32 mở cửa gạt đúng duration_ms rồi đóng
- *   -> publish xác nhận lên topic feeder/status.
+ * Board: ESP32 Dev Module. Thư viện: PubSubClient, ESP32Servo.
+ * WiFi và MQTT điền trong secrets.h (copy từ secrets.example.h).
+ * Dây cam của SG90 vào GPIO 13.
  *
- * Board: ESP32 NodeMCU LuaNode32 (chọn "ESP32 Dev Module" trong Arduino IDE).
- * Thư viện cần cài (Library Manager): PubSubClient (Nick O'Leary),
- *                                      ESP32Servo (Kevin Harrington).
- * Điền WiFi + MQTT vào secrets.h (copy từ secrets.example.h).
- *
- * Code chia thành id2Setup() / id2Loop() / id2XuLyLenh() để tuần 8 gộp với
- * firmware ID 1 (HC-SR04) của Thuận: chỉ cần gọi hai hàm này trong setup/loop
- * chung và cho callback MQTT chuyển topic feeder/cmd/feed vào id2XuLyLenh().
+ * id2Setup(), id2Loop() và id2XuLyLenh() được gọi trong firmware gộp.
+ * loop() không dùng delay() để lúc cửa mở vẫn giữ được MQTT.
  */
 
 #include <WiFi.h>

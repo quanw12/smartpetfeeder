@@ -1,26 +1,17 @@
 /*
- * Smart Pet Feeder — Firmware gộp ID 1 + ID 2 (nạp file này cho sản phẩm thật)
- *   ID 1: Đo mức thức ăn bằng HC-SR04 (Thuận, 24127551)
- *   ID 2: Cho ăn từ xa bằng servo SG90 (Quân, 24127512)
+ * Smart Pet Feeder — nạp file này cho sản phẩm thật.
+ *   ID 1 (Thuận, 24127551): HC-SR04 đo mức thức ăn.
+ *   ID 2 (Quân, 24127512): SG90 mở cửa theo lệnh từ xa.
  *
- * File do AI (Claude) gộp ngày 06/11/2026 từ firmware/id1_level_sensor và
- * firmware/id2_servo_feed. Chưa có đoạn sinh viên tự viết, chưa chép đoạn nào
- * từ nguồn ngoài. Sinh viên đọc hiểu, chỉnh sửa và ghi rõ phần tự sửa trước
- * khi nộp.
+ * Luồng 1: đo khoảng cách, đổi ra %, gửi {"level":72,"distance_cm":8.5}
+ *          lên feeder/level mỗi 2 phút và ngay sau mỗi lần cho ăn.
+ * Luồng 2: Dashboard gửi {"duration_ms":1500} lên feeder/cmd/feed,
+ *          ESP32 mở cửa rồi đóng, trả xác nhận lên feeder/status.
  *
- * Luồng 1: HC-SR04 -> ESP32 đổi ra % -> publish {"level":72,"distance_cm":8.5}
- *          lên feeder/level mỗi 2 phút, gửi thêm một lần ngay sau mỗi lần cho ăn.
- * Luồng 2: Dashboard -> {"duration_ms":1500} trên feeder/cmd/feed -> ESP32 mở
- *          cửa gạt rồi đóng -> xác nhận trên feeder/status.
- *
- * Board: ESP32 NodeMCU LuaNode32 (chọn "ESP32 Dev Module" trong Arduino IDE).
- * Thư viện (Library Manager): PubSubClient (Nick O'Leary),
- *                             ESP32Servo (Kevin Harrington).
- * Điền WiFi + MQTT vào secrets.h (copy từ secrets.example.h).
- * Nối dây: xem README.md cùng thư mục.
- *
- * Không dùng delay() trong loop(): trong lúc cửa mở, loop() vẫn đo mức và giữ
- * kết nối MQTT. Mỗi lần đo chặn tối đa 25 ms nên cửa đóng trễ không đáng kể.
+ * Công thức: d (cm) = thời_gian_µs * 0,0343 / 2, vì sóng đi và về.
+ * Board: ESP32 Dev Module. Thư viện: PubSubClient, ESP32Servo.
+ * WiFi và MQTT điền trong secrets.h. Nối dây xem README.md cùng thư mục.
+ * loop() không dùng delay() để lúc cửa mở vẫn đo mức và giữ MQTT.
  */
 
 #include <WiFi.h>

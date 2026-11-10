@@ -75,7 +75,7 @@ Bố cục trang Dashboard theo wireframe mục 2.2 của proposal. Cột trái 
 
 **ID 3:** ghi mọi tin mức hợp lệ và mọi lần cho ăn. ESP32 gửi mức 2 phút một lần, thêm một lần sau mỗi đợt cho ăn, nên khoảng 720 bản ghi mức mỗi ngày. ID 4 lấy tối đa 1000 bản ghi mức trong 24 giờ. Nếu vượt số này, phần dữ liệu cũ nhất bị bỏ do chưa phân trang. Bản ghi cho ăn không tính vào giới hạn này. Ghi lỗi thì chỉ cảnh báo trong log, dòng đó mất (chưa có thử lại). Bảng lịch sử làm mới mỗi 60 giây và sau mỗi lần ghi; mất mạng thì vẫn giữ bảng cũ.
 
-**ID 6:** 20:00 hằng ngày, nếu công tắc bật thì đọc Supabase rồi gửi email. Email gồm mức hiện tại, số lần và giờ cho ăn trong ngày tính từ 0:00 giờ Việt Nam, và thêm dòng cảnh báo nếu mức dưới 20%. Nút "Gửi thử email" gửi ngay, kể cả khi công tắc tắt. Công tắc quay về bật khi khởi động lại Node-RED.
+**ID 6:** 20:00 hằng ngày, nếu công tắc bật thì đọc Supabase rồi gửi email. Email gồm mức hiện tại, số lần và giờ cho ăn trong ngày tính từ 0:00 giờ Việt Nam, và thêm dòng cảnh báo nếu mức dưới 20%. Nút "Gửi thử email" gửi ngay, kể cả khi công tắc tắt, nhưng chỉ khi trình duyệt đã đăng nhập. Cron 20:00 không cần phiên. Công tắc quay về bật khi khởi động lại Node-RED.
 
 **ID 7:**
 
