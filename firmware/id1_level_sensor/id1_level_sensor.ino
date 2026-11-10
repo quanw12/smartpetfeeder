@@ -208,7 +208,9 @@ void id1_loop() {
     cho_gui_ngay = false;
     lan_gui_cuoi = bay_gio;
     gui_muc();
-  } else if (bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
+  } else if (!cho_gui_ngay && bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
+    // Đang chờ gửi ngay thì bỏ lượt định kỳ: lượt gửi ngay sẽ thay cho nó,
+    // tránh gửi hai lần cách nhau vài trăm ms bằng bộ mẫu chưa đủ.
     lan_gui_cuoi = bay_gio;
     gui_muc();
   }

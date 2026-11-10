@@ -38,12 +38,13 @@ Nếu ESP32 bị reset mỗi lần servo quay (sụt áp), thử sạc 2 A, cáp
 
 - Đo 200 ms/lần, lấy trung vị 5 lần đo gần nhất, gửi `feeder/level` **2 phút một lần**.
 - **Ngay sau mỗi lần cho ăn**: khi cửa đóng xong, hộp xoá các lần đo cũ (đo lúc chưa cho ăn), chờ đủ 5 lần đo mới (khoảng 1 s) rồi gửi một lần. Đếm 2 phút bắt đầu lại từ lần gửi này. Nếu 5 lần đo đó không ra được mức hợp lệ (cảm biến lỗi), hộp vẫn chờ và gửi ngay khi cảm biến đo lại được.
-- Cho ăn tiếp trong khoảng 1 s đó thì hộp chỉ gửi một mức, sau lần cuối. Đây là chủ ý: mức giữa các lần chỉ cách nhau dưới 1 s, không có ý nghĩa; mỗi lần cho ăn vẫn được ghi riêng ở ID 3. Không chặn lệnh cho ăn để Dashboard của ID 2 không phải xử lý thêm trường hợp từ chối.
+- Đang chờ lượt gửi sau cho ăn mà đến hạn 2 phút thì bỏ lượt định kỳ, chỉ gửi một lần khi đủ 5 lần đo mới.
+- Cho ăn tiếp trong khoảng 1 s đó thì hộp chỉ gửi một mức, sau lần cuối của cả đợt. Đây là chủ ý: mức giữa các lần chỉ cách nhau dưới 1 s, không có ý nghĩa; mỗi lần cho ăn vẫn được ghi riêng ở ID 3. Không chặn lệnh cho ăn để Dashboard của ID 2 không phải xử lý thêm trường hợp từ chối.
 - **Lúc mới bật máy**: gửi ngay khi đủ 5 lần đo và MQTT đã kết nối, để gauge có số sớm. Chờ MQTT tối đa 30 s; không có mạng thì sau 30 s vẫn in ra Serial.
 - MQTT rớt đúng lúc gửi thì lần đó bị bỏ, lần kế tiếp là 2 phút sau; nối lại không gửi bù. Kết quả `publish()` chưa được kiểm tra.
-- Dashboard và cảnh báo ntfy (ID 5) có thể trễ tới khoảng 2 phút so với mức thật, trừ lúc vừa cho ăn.
+- Khi cảm biến và mạng bình thường, Dashboard và cảnh báo ntfy (ID 5) trễ tối đa khoảng 2 phút so với mức thật. Nếu cho ăn liên tục mỗi dưới 1 s thì hộp không gửi mức cho tới khi dừng đợt; cảm biến lỗi thì không gửi cho tới khi đo lại được.
 
-Lý do chọn 2 phút: ID 3 ghi mọi tin mức lên Supabase, và ID 4 đọc tối đa 1000 dòng cho 24 giờ. 2 phút/lần là 720 dòng/ngày, mỗi lần cho ăn thêm một dòng mức. Cho ăn dưới khoảng 280 lần/ngày thì vẫn dưới 1000; nhiều hơn thì biểu đồ 24 giờ mất phần đầu (chưa phân trang). Gửi 5 s/lần thì 17.280 dòng/ngày.
+Lý do chọn 2 phút: ID 3 ghi mọi tin mức lên Supabase, và ID 4 đọc tối đa 1000 dòng cho 24 giờ. 2 phút/lần là khoảng 720 bản ghi mức/ngày, mỗi đợt cho ăn thêm một bản ghi mức (và đếm lại 2 phút). ID 4 lấy tối đa 1000 bản ghi mức trong 24 giờ; vượt số này thì phần cũ nhất bị bỏ do chưa phân trang. Bản ghi cho ăn không tính vào giới hạn này. Gửi 5 s/lần thì 17.280 dòng/ngày.
 
 ## Khi cảm biến lỗi
 
