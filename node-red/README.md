@@ -75,15 +75,16 @@ Bố cục trang Dashboard theo wireframe mục 2.2 của proposal. Cột trái 
 
 **ID 3:** ghi mọi tin mức hợp lệ và mọi lần cho ăn. ESP32 gửi mức 2 phút một lần, thêm một lần sau mỗi đợt cho ăn, nên khoảng 720 bản ghi mức mỗi ngày. ID 4 lấy tối đa 1000 bản ghi mức trong 24 giờ. Nếu vượt số này, phần dữ liệu cũ nhất bị bỏ do chưa phân trang. Bản ghi cho ăn không tính vào giới hạn này. Ghi lỗi thì chỉ cảnh báo trong log, dòng đó mất (chưa có thử lại). Bảng lịch sử làm mới mỗi 60 giây và sau mỗi lần ghi; mất mạng thì vẫn giữ bảng cũ.
 
-**ID 6:** 20:00 hằng ngày, nếu công tắc bật thì đọc Supabase rồi gửi email. Email gồm mức hiện tại, số lần và giờ cho ăn trong ngày tính từ 0:00 giờ Việt Nam, và thêm dòng cảnh báo nếu mức dưới 20%. Nút "Gửi thử email" gửi ngay, kể cả khi công tắc tắt. Công tắc quay về bật khi khởi động lại Node-RED.
+**ID 6:** 20:00 hằng ngày, nếu công tắc bật thì đọc Supabase rồi gửi email. Email gồm mức hiện tại, số lần và giờ cho ăn trong ngày tính từ 0:00 giờ Việt Nam, và thêm dòng cảnh báo nếu mức dưới 20%. Nút "Gửi thử email" gửi ngay, kể cả khi công tắc tắt, nhưng chỉ khi trình duyệt đã đăng nhập. Cron 20:00 không cần phiên. Công tắc quay về bật khi khởi động lại Node-RED.
 
 **ID 7:**
 
 - Mật khẩu được băm bằng scrypt với muối ngẫu nhiên 16 byte. Truy vấn SQLite có tham số, nên không bị SQL injection.
 - Tên đăng nhập 3–32 ký tự, chỉ gồm chữ, số và `_`. Mật khẩu ít nhất 6 ký tự.
 - File `users.db` nằm ở thư mục chạy Node-RED (gốc repo nếu chạy `start.ps1` như trên), đã có trong `.gitignore`.
-- Phiên đăng nhập gắn với kết nối Dashboard của từng trình duyệt. F5 hoặc khởi động lại Node-RED thì phải đăng nhập lại.
-- Đây là kiểm soát ở mức giao diện cho đồ án, không thay cho xác thực HTTP thật (`httpNodeAuth`).
+- Phiên đăng nhập gắn với kết nối Dashboard của từng trình duyệt và lưu ở `global.phien` (không dùng `flow`, vì ID 7 nằm tab khác với nút cho ăn). F5 hoặc khởi động lại Node-RED thì phải đăng nhập lại.
+- Chưa đăng nhập thì trang Dashboard bị chuyển về trang đăng nhập. Backend cũng từ chối thao tác từ trình duyệt chưa có phiên: nút CHO ĂN không gửi MQTT, chat không gọi Supabase hay Gemini, nút gửi thử email không gửi, thanh thời gian mở và hai công tắc không ghi đè trạng thái dùng chung. Cron 20:00, inject lúc khởi động, đo mức, cảnh báo ntfy và biểu đồ vẫn chạy trên máy chủ.
+- Đăng nhập web không thay xác thực của broker MQTT. Broker công khai vẫn để ai cũng gửi `feeder/cmd/feed` được; khi chạy thật phải đặt user/pass trên HiveMQ hoặc EMQX. Đây cũng không phải `httpNodeAuth` của Node-RED.
 
 ## Bảo mật
 

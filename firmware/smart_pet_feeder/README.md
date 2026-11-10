@@ -2,8 +2,6 @@
 
 Đây là chương trình nạp cho sản phẩm thật. Một ESP32 vừa đo mức thức ăn (ID 1, Thuận) vừa điều khiển cửa gạt (ID 2, Quân).
 
-*File do AI (Claude) gộp ngày 06/11/2026 từ `firmware/id1_level_sensor` và `firmware/id2_servo_feed`. Nhóm đọc hiểu và chỉnh trước khi nộp.*
-
 Hai thư mục cũ vẫn giữ lại để thử riêng từng phần. Cách đo và lý do thiết kế của từng phần nằm trong README của hai thư mục đó.
 
 ## Nối dây
@@ -77,6 +75,6 @@ Lần đo lỗi cũng được ghi vào 5 lần đo gần nhất. Dưới 3 lầ
 
 Đã biên dịch bằng `arduino-cli` cho board ESP32 Dev Module với esp32 core 3.3.12, PubSubClient 2.8 và ESP32Servo 3.2.1, cả khi bật và tắt TLS. Bản bật TLS chiếm khoảng 76% bộ nhớ chương trình và 14% RAM.
 
-**10/11/2026 (đổi sang gửi 2 phút + sau khi cho ăn):** chạy lại logic bằng `g++` với Arduino giả lập: gửi lần đầu sau khoảng 1 s, không gửi trước 2 phút, gửi đúng 2 phút, sau khi cho ăn gửi bằng số đo mới (không lẫn số đo cũ), đếm 2 phút lại từ đó, tuột dây thì không gửi, bật máy chưa có MQTT thì chờ. Sau review của Codex: cảm biến lỗi ngay sau cho ăn rồi hết lỗi thì vẫn gửi ngay; 3 lệnh cho ăn 200 ms liên tiếp thì có 3 `done` và một mức sau lần cuối; `millis()` tràn không làm chờ MQTT lại 30 s. Bản này **chưa biên dịch lại bằng `arduino-cli`**.
+**10/11/2026 (đổi sang gửi 2 phút + sau khi cho ăn):** chạy lại logic bằng `g++` với Arduino giả lập: gửi lần đầu sau khoảng 1 s, không gửi trước 2 phút, gửi đúng 2 phút, sau khi cho ăn gửi bằng số đo mới (không lẫn số đo cũ), đếm 2 phút lại từ đó, tuột dây thì không gửi, bật máy chưa có MQTT thì chờ. Cảm biến lỗi ngay sau cho ăn rồi hết lỗi thì vẫn gửi ngay; 3 lệnh cho ăn 200 ms liên tiếp thì có 3 `done` và một mức sau lần cuối; `millis()` tràn không làm chờ MQTT lại 30 s. Bản này **chưa biên dịch lại bằng `arduino-cli`**.
 
 **Chưa làm:** chạy trên Wokwi, nạp lên board. Biên dịch và giả lập không kiểm tra được sụt áp, nhiễu servo hay kết nối TLS thật.
