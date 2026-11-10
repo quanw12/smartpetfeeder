@@ -9,7 +9,7 @@
  * khi nộp.
  *
  * Luồng 1: HC-SR04 -> ESP32 đổi ra % -> publish {"level":72,"distance_cm":8.5}
- *          lên feeder/level mỗi 5 s.
+ *          lên feeder/level mỗi 2 phút, gửi thêm một lần ngay sau mỗi lần cho ăn.
  * Luồng 2: Dashboard -> {"duration_ms":1500} trên feeder/cmd/feed -> ESP32 mở
  *          cửa gạt rồi đóng -> xác nhận trên feeder/status.
  *
@@ -70,7 +70,8 @@ const float DO_XA_NHAT_CM  = 400.0;
 const unsigned long HET_GIO_ECHO_US = 25000;
 
 const unsigned long CHU_KY_DO_MS  = 200;    // mỗi 200 ms đo một lần
-const unsigned long CHU_KY_GUI_MS = 5000;   // mỗi 5 s gửi một lần
+const unsigned long CHU_KY_GUI_MS = 120000; // mỗi 2 phút gửi một lần
+const unsigned long CHO_MQTT_KHI_BAT_MS = 30000; // lúc bật máy chờ MQTT tối đa 30 s
 const int SO_MAU = 5;                       // xét 5 lần đo gần nhất
 const int SO_MAU_TOI_THIEU = 3;             // ít hơn thì chưa đủ tin để gửi
 
@@ -82,6 +83,10 @@ int so_lan_do = 0;
 
 unsigned long lan_do_cuoi = 0;
 unsigned long lan_gui_cuoi = 0;
+// true: gửi ngay khi có đủ 5 lần đo mới, không đợi hết 2 phút. Bật lúc khởi
+// động (để gauge có số sớm) và sau mỗi lần cho ăn (để thấy mức đã giảm).
+bool cho_gui_ngay = true;
+bool het_cho_khoi_dong = false;   // đã qua 30 s đầu sau khi bật
 
 // Một lần đo mất tối đa ~25 ms (hết giờ echo), đủ ngắn để không làm trễ loop
 float do_mot_lan() {
@@ -155,6 +160,15 @@ void gui_muc() {
   else Serial.println("[ID1] Chua ket noi MQTT, bo qua lan gui nay");
 }
 
+// Gọi khi cửa vừa đóng xong. Xoá các lần đo cũ (đo lúc chưa cho ăn) rồi chờ
+// đủ 5 lần đo mới, khoảng 1 s, mới gửi mức. Cho ăn tiếp trong 1 s đó thì bộ
+// đếm bắt đầu lại: chỉ gửi một mức sau lần cuối, là mức thật sau cả loạt.
+void id1_bao_vua_cho_an() {
+  so_lan_do = 0;
+  vi_tri_ghi = 0;
+  cho_gui_ngay = true;
+}
+
 void id1_setup() {
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
@@ -168,7 +182,21 @@ void id1_loop() {
     lan_do_cuoi = bay_gio;
     them_mau(do_mot_lan());
   }
-  if (bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
+  // Lúc mới bật máy, chờ MQTT kết nối (tối đa 30 s) để lần gửi đầu không bị
+  // bỏ qua; không có mạng thì sau 30 s vẫn in mức ra Serial. Dùng cờ để khi
+  // millis() tràn về 0 thì không chờ lại lần nữa.
+  if (!het_cho_khoi_dong && bay_gio >= CHO_MQTT_KHI_BAT_MS) het_cho_khoi_dong = true;
+
+  // Gửi ngay chỉ khi đã đủ 5 lần đo mới VÀ ra được mức hợp lệ. Cảm biến lỗi
+  // thì giữ cờ, đo tiếp, cảm biến hết lỗi là gửi luôn, không đợi 2 phút.
+  if (cho_gui_ngay && so_lan_do >= SO_MAU && tinh_trung_vi() >= 0
+      && (mqtt.connected() || het_cho_khoi_dong)) {
+    cho_gui_ngay = false;
+    lan_gui_cuoi = bay_gio;   // đếm lại 2 phút từ lần gửi này
+    gui_muc();
+  } else if (!cho_gui_ngay && bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
+    // Đang chờ gửi ngay thì bỏ lượt định kỳ: lượt gửi ngay sẽ thay cho nó,
+    // tránh gửi hai lần cách nhau vài trăm ms bằng bộ mẫu chưa đủ.
     lan_gui_cuoi = bay_gio;
     gui_muc();
   }
@@ -265,6 +293,7 @@ void id2Loop() {
   } else if (trangThai == CUA_DANG_VE && now - mocChuyenTrangThai >= CHO_DONG_MS) {
     trangThai = CUA_DONG;
     guiTrangThai("done", thoiGianMo, nullptr);
+    id1_bao_vua_cho_an();    // ID 1 gửi mức mới sau khi cho ăn
   }
 }
 

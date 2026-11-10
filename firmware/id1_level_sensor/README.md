@@ -1,6 +1,6 @@
 # ID 1 - Đo mức thức ăn (HC-SR04)
 
-Phần của Thuận. ESP32 đo khoảng cách từ nắp phễu xuống mặt thức ăn rồi đổi ra phần trăm. Cứ 5 giây nó gửi kết quả lên `feeder/level` một lần.
+Phần của Thuận. ESP32 đo khoảng cách từ nắp phễu xuống mặt thức ăn rồi đổi ra phần trăm. Lần đầu gửi ngay khi có đủ 5 lần đo, sau đó cứ 2 phút gửi kết quả lên `feeder/level` một lần. Bản gộp ở `firmware/smart_pet_feeder` gửi thêm một lần ngay sau mỗi lần cho ăn; sketch này không có servo nên không có lần đó.
 
 *File do AI (Claude) sinh ngày 06/11/2026, Thuận đọc hiểu và chỉnh trước khi nộp.*
 
@@ -21,7 +21,8 @@ Cầu chia áp: Echo → 1 kΩ → GPIO 18, và GPIO 18 → 2,2 kΩ → GND.
 - Lần đo không có tiếng vọng hoặc ra ngoài khoảng 2–400 cm được tính là lỗi.
 - Lấy **trung vị** của các lần hợp lệ trong 5 lần đo gần nhất, vì một lần sóng dội vào thành phễu sẽ không làm lệch kết quả như khi lấy trung bình.
 - Mức (%) = 100 × (khoảng cách lúc rỗng − khoảng cách đo được) / (khoảng cách lúc rỗng − khoảng cách lúc đầy), kẹp trong 0–100.
-- Trong 5 lần gần nhất có ít hơn 3 lần hợp lệ thì không gửi gì, chỉ in cảnh báo ra Serial. Vì vậy khi tuột dây, hộp ngừng gửi sau khoảng 1 s chứ không gửi mãi số cũ.
+- Trong 5 lần gần nhất có ít hơn 3 lần hợp lệ thì không gửi gì, chỉ in cảnh báo ra Serial. Vì vậy khi tuột dây, hộp không gửi mãi số cũ.
+- Lúc mới bật, chờ MQTT kết nối tối đa 30 s rồi mới gửi lần đầu, để lần đó không bị bỏ.
 
 ## Dữ liệu gửi đi
 
@@ -57,4 +58,4 @@ Giá trị mặc định là 20 cm lúc rỗng và 4 cm lúc đầy.
 
 ## Trạng thái kiểm thử
 
-Đã biên dịch bằng `arduino-cli` với esp32 core 3.3.12. Chưa thử trên Wokwi và chưa nạp lên board thật.
+Đã biên dịch bằng `arduino-cli` với esp32 core 3.3.12 (bản gửi 5 s). Bản gửi 2 phút (10/11/2026) mới chạy logic bằng `g++` giả lập, chưa biên dịch lại. Chưa thử trên Wokwi và chưa nạp lên board thật.
