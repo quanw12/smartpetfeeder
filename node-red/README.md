@@ -73,7 +73,7 @@ Bố cục trang Dashboard theo wireframe mục 2.2 của proposal. Cột trái 
 
 **ID 1:** số đo không phải số hoặc nằm ngoài 0–100 thì bị bỏ qua và có cảnh báo trong log. Mức mới nhất được lưu vào global `muc_moi_nhat`.
 
-**ID 3:** ghi mọi tin mức hợp lệ và mọi lần cho ăn. ESP32 gửi mức 2 phút một lần, thêm một lần ngay sau mỗi lần cho ăn, nên khoảng 720 dòng mức mỗi ngày cộng số lần cho ăn. Lý do chọn 2 phút: ID 4 đọc tối đa 1000 dòng cho 24 giờ. Ghi lỗi thì chỉ cảnh báo trong log, dòng đó mất (chưa có thử lại). Bảng lịch sử làm mới mỗi 60 giây và sau mỗi lần ghi; mất mạng thì vẫn giữ bảng cũ.
+**ID 3:** ghi mọi tin mức hợp lệ và mọi lần cho ăn. ESP32 gửi mức 2 phút một lần, thêm một lần ngay sau mỗi lần cho ăn, nên khoảng 720 dòng mức mỗi ngày, cộng hai dòng (mức và cho ăn) cho mỗi lần cho ăn. Lý do chọn 2 phút: ID 4 đọc tối đa 1000 dòng cho 24 giờ; cho ăn quá khoảng 140 lần/ngày thì biểu đồ mất phần đầu của 24 giờ (chưa phân trang). Ghi lỗi thì chỉ cảnh báo trong log, dòng đó mất (chưa có thử lại). Bảng lịch sử làm mới mỗi 60 giây và sau mỗi lần ghi; mất mạng thì vẫn giữ bảng cũ.
 
 **ID 6:** 20:00 hằng ngày, nếu công tắc bật thì đọc Supabase rồi gửi email. Email gồm mức hiện tại, số lần và giờ cho ăn trong ngày tính từ 0:00 giờ Việt Nam, và thêm dòng cảnh báo nếu mức dưới 20%. Nút "Gửi thử email" gửi ngay, kể cả khi công tắc tắt. Công tắc quay về bật khi khởi động lại Node-RED.
 

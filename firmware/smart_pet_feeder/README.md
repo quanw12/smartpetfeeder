@@ -37,11 +37,13 @@ Nếu ESP32 bị reset mỗi lần servo quay (sụt áp), thử sạc 2 A, cáp
 ## Khi nào gửi mức
 
 - Đo 200 ms/lần, lấy trung vị 5 lần đo gần nhất, gửi `feeder/level` **2 phút một lần**.
-- **Ngay sau mỗi lần cho ăn**: khi cửa đóng xong, hộp xoá các lần đo cũ (đo lúc chưa cho ăn), chờ đủ 5 lần đo mới (khoảng 1 s) rồi gửi một lần. Đếm 2 phút bắt đầu lại từ lần gửi này.
+- **Ngay sau mỗi lần cho ăn**: khi cửa đóng xong, hộp xoá các lần đo cũ (đo lúc chưa cho ăn), chờ đủ 5 lần đo mới (khoảng 1 s) rồi gửi một lần. Đếm 2 phút bắt đầu lại từ lần gửi này. Nếu 5 lần đo đó không ra được mức hợp lệ (cảm biến lỗi), hộp vẫn chờ và gửi ngay khi cảm biến đo lại được.
+- Cho ăn tiếp trong khoảng 1 s đó thì hộp chỉ gửi một mức, sau lần cuối. Đây là chủ ý: mức giữa các lần chỉ cách nhau dưới 1 s, không có ý nghĩa; mỗi lần cho ăn vẫn được ghi riêng ở ID 3. Không chặn lệnh cho ăn để Dashboard của ID 2 không phải xử lý thêm trường hợp từ chối.
 - **Lúc mới bật máy**: gửi ngay khi đủ 5 lần đo và MQTT đã kết nối, để gauge có số sớm. Chờ MQTT tối đa 30 s; không có mạng thì sau 30 s vẫn in ra Serial.
-- MQTT rớt đúng lúc gửi thì lần đó bị bỏ, lần kế tiếp là 2 phút sau.
+- MQTT rớt đúng lúc gửi thì lần đó bị bỏ, lần kế tiếp là 2 phút sau; nối lại không gửi bù. Kết quả `publish()` chưa được kiểm tra.
+- Dashboard và cảnh báo ntfy (ID 5) có thể trễ tới khoảng 2 phút so với mức thật, trừ lúc vừa cho ăn.
 
-Lý do chọn 2 phút: ID 3 ghi mọi tin mức lên Supabase, và ID 4 đọc tối đa 1000 dòng cho 24 giờ. 2 phút/lần là 720 dòng/ngày, cộng số lần cho ăn vẫn dưới 1000. Gửi 5 s/lần thì 17.280 dòng/ngày.
+Lý do chọn 2 phút: ID 3 ghi mọi tin mức lên Supabase, và ID 4 đọc tối đa 1000 dòng cho 24 giờ. 2 phút/lần là 720 dòng/ngày, mỗi lần cho ăn thêm một dòng mức. Cho ăn dưới khoảng 280 lần/ngày thì vẫn dưới 1000; nhiều hơn thì biểu đồ 24 giờ mất phần đầu (chưa phân trang). Gửi 5 s/lần thì 17.280 dòng/ngày.
 
 ## Khi cảm biến lỗi
 
@@ -74,6 +76,6 @@ Lần đo lỗi cũng được ghi vào 5 lần đo gần nhất. Dưới 3 lầ
 
 Đã biên dịch bằng `arduino-cli` cho board ESP32 Dev Module với esp32 core 3.3.12, PubSubClient 2.8 và ESP32Servo 3.2.1, cả khi bật và tắt TLS. Bản bật TLS chiếm khoảng 76% bộ nhớ chương trình và 14% RAM.
 
-**10/11/2026 (đổi sang gửi 2 phút + sau khi cho ăn):** chạy lại logic bằng `g++` với Arduino giả lập: gửi lần đầu sau khoảng 1 s, không gửi trước 2 phút, gửi đúng 2 phút, sau khi cho ăn gửi bằng số đo mới (không lẫn số đo cũ), đếm 2 phút lại từ đó, tuột dây thì không gửi, bật máy chưa có MQTT thì chờ. Bản này **chưa biên dịch lại bằng `arduino-cli`**.
+**10/11/2026 (đổi sang gửi 2 phút + sau khi cho ăn):** chạy lại logic bằng `g++` với Arduino giả lập: gửi lần đầu sau khoảng 1 s, không gửi trước 2 phút, gửi đúng 2 phút, sau khi cho ăn gửi bằng số đo mới (không lẫn số đo cũ), đếm 2 phút lại từ đó, tuột dây thì không gửi, bật máy chưa có MQTT thì chờ. Sau review của Codex: cảm biến lỗi ngay sau cho ăn rồi hết lỗi thì vẫn gửi ngay; 3 lệnh cho ăn 200 ms liên tiếp thì có 3 `done` và một mức sau lần cuối; `millis()` tràn không làm chờ MQTT lại 30 s. Bản này **chưa biên dịch lại bằng `arduino-cli`**.
 
 **Chưa làm:** chạy trên Wokwi, nạp lên board. Biên dịch và giả lập không kiểm tra được sụt áp, nhiễu servo hay kết nối TLS thật.

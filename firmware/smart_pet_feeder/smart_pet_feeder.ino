@@ -86,6 +86,7 @@ unsigned long lan_gui_cuoi = 0;
 // true: gửi ngay khi có đủ 5 lần đo mới, không đợi hết 2 phút. Bật lúc khởi
 // động (để gauge có số sớm) và sau mỗi lần cho ăn (để thấy mức đã giảm).
 bool cho_gui_ngay = true;
+bool het_cho_khoi_dong = false;   // đã qua 30 s đầu sau khi bật
 
 // Một lần đo mất tối đa ~25 ms (hết giờ echo), đủ ngắn để không làm trễ loop
 float do_mot_lan() {
@@ -160,7 +161,8 @@ void gui_muc() {
 }
 
 // Gọi khi cửa vừa đóng xong. Xoá các lần đo cũ (đo lúc chưa cho ăn) rồi chờ
-// đủ 5 lần đo mới, khoảng 1 s, mới gửi mức.
+// đủ 5 lần đo mới, khoảng 1 s, mới gửi mức. Cho ăn tiếp trong 1 s đó thì bộ
+// đếm bắt đầu lại: chỉ gửi một mức sau lần cuối, là mức thật sau cả loạt.
 void id1_bao_vua_cho_an() {
   so_lan_do = 0;
   vi_tri_ghi = 0;
@@ -180,14 +182,18 @@ void id1_loop() {
     lan_do_cuoi = bay_gio;
     them_mau(do_mot_lan());
   }
-  if (cho_gui_ngay) {
-    // Lúc mới bật máy, chờ MQTT kết nối (tối đa 30 s) để lần gửi đầu không
-    // bị bỏ qua. Không có mạng thì sau 30 s vẫn in mức ra Serial.
-    if (so_lan_do >= SO_MAU && (mqtt.connected() || bay_gio >= CHO_MQTT_KHI_BAT_MS)) {
-      cho_gui_ngay = false;
-      lan_gui_cuoi = bay_gio;   // đếm lại 2 phút từ lần gửi này
-      gui_muc();
-    }
+  // Lúc mới bật máy, chờ MQTT kết nối (tối đa 30 s) để lần gửi đầu không bị
+  // bỏ qua; không có mạng thì sau 30 s vẫn in mức ra Serial. Dùng cờ để khi
+  // millis() tràn về 0 thì không chờ lại lần nữa.
+  if (!het_cho_khoi_dong && bay_gio >= CHO_MQTT_KHI_BAT_MS) het_cho_khoi_dong = true;
+
+  // Gửi ngay chỉ khi đã đủ 5 lần đo mới VÀ ra được mức hợp lệ. Cảm biến lỗi
+  // thì giữ cờ, đo tiếp, cảm biến hết lỗi là gửi luôn, không đợi 2 phút.
+  if (cho_gui_ngay && so_lan_do >= SO_MAU && tinh_trung_vi() >= 0
+      && (mqtt.connected() || het_cho_khoi_dong)) {
+    cho_gui_ngay = false;
+    lan_gui_cuoi = bay_gio;   // đếm lại 2 phút từ lần gửi này
+    gui_muc();
   } else if (bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
     lan_gui_cuoi = bay_gio;
     gui_muc();

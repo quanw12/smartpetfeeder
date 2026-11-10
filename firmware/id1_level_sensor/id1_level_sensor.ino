@@ -73,6 +73,7 @@ unsigned long lan_gui_cuoi = 0;
 // true: gửi ngay khi đủ 5 lần đo đầu tiên, để gauge có số sớm sau khi bật máy.
 // Sketch này không có servo nên không có lần gửi thêm sau khi cho ăn.
 bool cho_gui_ngay = true;
+bool het_cho_khoi_dong = false;   // đã qua 30 s đầu sau khi bật
 unsigned long lan_thu_mqtt_cuoi = 0;
 char client_id[32];
 
@@ -195,14 +196,18 @@ void id1_loop() {
     lan_do_cuoi = bay_gio;
     them_mau(do_mot_lan());
   }
-  if (cho_gui_ngay) {
-    // Lúc mới bật máy, chờ MQTT kết nối (tối đa 30 s) để lần gửi đầu không
-    // bị bỏ qua. Không có mạng thì sau 30 s vẫn in mức ra Serial.
-    if (so_lan_do >= SO_MAU && (mqtt.connected() || bay_gio >= CHO_MQTT_KHI_BAT_MS)) {
-      cho_gui_ngay = false;
-      lan_gui_cuoi = bay_gio;
-      gui_muc();
-    }
+  // Lúc mới bật máy, chờ MQTT kết nối (tối đa 30 s) để lần gửi đầu không bị
+  // bỏ qua; không có mạng thì sau 30 s vẫn in mức ra Serial. Dùng cờ để khi
+  // millis() tràn về 0 thì không chờ lại lần nữa.
+  if (!het_cho_khoi_dong && bay_gio >= CHO_MQTT_KHI_BAT_MS) het_cho_khoi_dong = true;
+
+  // Gửi ngay chỉ khi đã đủ 5 lần đo VÀ ra được mức hợp lệ. Cảm biến lỗi thì
+  // giữ cờ, đo tiếp, cảm biến hết lỗi là gửi luôn, không đợi 2 phút.
+  if (cho_gui_ngay && so_lan_do >= SO_MAU && tinh_trung_vi() >= 0
+      && (mqtt.connected() || het_cho_khoi_dong)) {
+    cho_gui_ngay = false;
+    lan_gui_cuoi = bay_gio;
+    gui_muc();
   } else if (bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
     lan_gui_cuoi = bay_gio;
     gui_muc();
