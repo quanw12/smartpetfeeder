@@ -8,7 +8,7 @@
  * Luồng 1 (proposal mục 1.2):
  *   HC-SR04 gắn trên nắp phễu, đo khoảng cách xuống mặt thức ăn
  *   -> ESP32 đổi ra % mức -> publish {"level":72,"distance_cm":8.5}
- *   lên topic feeder/level mỗi 5 s -> Node-RED hiện gauge (ID 1),
+ *   lên topic feeder/level mỗi 2 phút -> Node-RED hiện gauge (ID 1),
  *   lưu Supabase (ID 3), cảnh báo ntfy (ID 5 của Quân).
  *
  * Nối dây:
@@ -46,7 +46,8 @@ const float DO_XA_NHAT_CM  = 400.0;
 const unsigned long HET_GIO_ECHO_US = 25000;
 
 const unsigned long CHU_KY_DO_MS  = 200;    // mỗi 200 ms đo một lần
-const unsigned long CHU_KY_GUI_MS = 5000;   // mỗi 5 s gửi một lần
+const unsigned long CHU_KY_GUI_MS = 120000; // mỗi 2 phút gửi một lần
+const unsigned long CHO_MQTT_KHI_BAT_MS = 30000; // lúc bật máy chờ MQTT tối đa 30 s
 const int SO_MAU = 5;                       // lấy trung vị 5 lần đo gần nhất
 const int SO_MAU_TOI_THIEU = 3;             // ít hơn thì chưa đủ tin để gửi
 
@@ -69,6 +70,9 @@ int so_lan_do = 0;
 
 unsigned long lan_do_cuoi = 0;
 unsigned long lan_gui_cuoi = 0;
+// true: gửi ngay khi đủ 5 lần đo đầu tiên, để gauge có số sớm sau khi bật máy.
+// Sketch này không có servo nên không có lần gửi thêm sau khi cho ăn.
+bool cho_gui_ngay = true;
 unsigned long lan_thu_mqtt_cuoi = 0;
 char client_id[32];
 
@@ -191,7 +195,15 @@ void id1_loop() {
     lan_do_cuoi = bay_gio;
     them_mau(do_mot_lan());
   }
-  if (bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
+  if (cho_gui_ngay) {
+    // Lúc mới bật máy, chờ MQTT kết nối (tối đa 30 s) để lần gửi đầu không
+    // bị bỏ qua. Không có mạng thì sau 30 s vẫn in mức ra Serial.
+    if (so_lan_do >= SO_MAU && (mqtt.connected() || bay_gio >= CHO_MQTT_KHI_BAT_MS)) {
+      cho_gui_ngay = false;
+      lan_gui_cuoi = bay_gio;
+      gui_muc();
+    }
+  } else if (bay_gio - lan_gui_cuoi >= CHU_KY_GUI_MS) {
     lan_gui_cuoi = bay_gio;
     gui_muc();
   }

@@ -6,7 +6,7 @@
 |---|---|---|
 | ID 1 - Đo mức | Gauge mức thức ăn, giờ cập nhật | Broker MQTT, ESP32 chạy `firmware/smart_pet_feeder` |
 | ID 2 - Cho ăn | Thanh trượt, nút CHO ĂN, trạng thái, kết nối hộp | Broker MQTT, ESP32 chạy `firmware/smart_pet_feeder` |
-| ID 3 - Lưu Supabase | Ghi mức (2 phút/lần) và lần cho ăn, bảng 10 sự kiện gần nhất | Supabase |
+| ID 3 - Lưu Supabase | Ghi mọi số đo mức và mọi lần cho ăn, bảng 10 sự kiện gần nhất | Supabase |
 | ID 4 - Biểu đồ 24 giờ | Đọc Supabase mỗi 60 giây, vẽ đường | Supabase có dữ liệu từ ID 3 |
 | ID 5 - Thông báo ntfy | Mức dưới 20% thì báo về điện thoại, có công tắc | `feeder/level` từ ID 1, app ntfy |
 | ID 6 - Email 20:00 | Email báo cáo lúc 20:00, có công tắc và nút gửi thử | Supabase, Gmail App Password, `EMAIL_TO` |
@@ -46,7 +46,7 @@ ID 4 và ID 8 đọc bảng `feeder_events` trong `supabase/schema.sql`. ID 3 gh
 
 | Sự kiện | Khi nào ghi | Dữ liệu |
 |---|---|---|
-| Đo mức | Tin `feeder/level` đầu tiên, sau đó tối đa 2 phút một dòng | `{"event":"level","level":72}` |
+| Đo mức | Mỗi tin `feeder/level` hợp lệ (ESP32 gửi 2 phút/lần và ngay sau mỗi lần cho ăn) | `{"event":"level","level":72}` |
 | Cho ăn | Tin `feeder/status` có `result === "done"` | `{"event":"feed","duration_ms":1500}` |
 
 Nếu đổi tên bảng hoặc cột thì sửa ba function: "Tạo truy vấn 24 giờ" (ID 4), "Nhận câu hỏi" và "Lưu mức, hỏi lịch sử" (ID 8). Cũng phải sửa các function Supabase trong tab ID 3 và ID 6.
@@ -73,7 +73,7 @@ Bố cục trang Dashboard theo wireframe mục 2.2 của proposal. Cột trái 
 
 **ID 1:** số đo không phải số hoặc nằm ngoài 0–100 thì bị bỏ qua và có cảnh báo trong log. Mức mới nhất được lưu vào global `muc_moi_nhat`.
 
-**ID 3:** ESP32 gửi 5 giây một lần, nhưng chỉ ghi 2 phút một dòng, tức 720 dòng mỗi ngày. Lý do: ID 4 đọc tối đa 1000 dòng cho 24 giờ. Ghi lỗi thì số đo kế tiếp được ghi lại ngay, không phải đợi 2 phút. Lần cho ăn luôn được ghi. Bảng lịch sử làm mới mỗi 60 giây và sau mỗi lần ghi; mất mạng thì vẫn giữ bảng cũ.
+**ID 3:** ghi mọi tin mức hợp lệ và mọi lần cho ăn. ESP32 gửi mức 2 phút một lần, thêm một lần ngay sau mỗi lần cho ăn, nên khoảng 720 dòng mức mỗi ngày cộng số lần cho ăn. Lý do chọn 2 phút: ID 4 đọc tối đa 1000 dòng cho 24 giờ. Ghi lỗi thì chỉ cảnh báo trong log, dòng đó mất (chưa có thử lại). Bảng lịch sử làm mới mỗi 60 giây và sau mỗi lần ghi; mất mạng thì vẫn giữ bảng cũ.
 
 **ID 6:** 20:00 hằng ngày, nếu công tắc bật thì đọc Supabase rồi gửi email. Email gồm mức hiện tại, số lần và giờ cho ăn trong ngày tính từ 0:00 giờ Việt Nam, và thêm dòng cảnh báo nếu mức dưới 20%. Nút "Gửi thử email" gửi ngay, kể cả khi công tắc tắt. Công tắc quay về bật khi khởi động lại Node-RED.
 
@@ -98,5 +98,5 @@ Repo đang public. Key chỉ nằm trong `.env`, user và pass MQTT nằm trong 
 **Phần của Thuận (06/11/2026):**
 
 - Đã chạy `flows_quan.json` và `flows_thuan.json` chung trên Node-RED thật, với broker MQTT, Supabase và SMTP giả lập cục bộ. Đã kiểm tra trên trình duyệt: chuyển sang trang đăng nhập, đăng ký, đăng nhập, gauge, bảng lịch sử và nút gửi thử email.
-- Gom mức 2 phút/lần, ghi lại khi lỗi, và chặn đúng các số đo sai.
+- Chặn đúng các số đo sai. (10/11/2026: bỏ gom 2 phút ở Node-RED vì ESP32 đã gửi 2 phút/lần; mỗi tin ghi một dòng, đã chạy thử function bằng Node.)
 - Chưa thử Gmail thật, Supabase thật, cron 20:00 theo giờ thật, và firmware ID 1 trên board.
