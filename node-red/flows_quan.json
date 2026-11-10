@@ -11,7 +11,7 @@
     "type": "comment",
     "z": "1d2f00000000a001",
     "name": "ID 2 - Luồng 2: Dashboard -> MQTT -> ESP32 -> xác nhận (file do AI (Claude) sinh 05/11/2026)",
-    "info": "Bấm CHO ĂN -> gửi {\"duration_ms\":...} lên feeder/cmd/feed (retain=false).\nESP32 trả về feeder/status: opening, done hoặc rejected.\nKhông có done sau 8 s thì báo không nhận được xác nhận.",
+    "info": "Bấm CHO ĂN -> gửi {\"duration_ms\":...} lên feeder/cmd/feed (retain=false).\nESP32 trả về feeder/status: opening, done hoặc rejected.\nKhông có done sau 8 s thì báo không nhận được xác nhận.\nChỉ gửi lệnh khi trình duyệt bấm nút đã có phiên trong global.phien.",
     "x": 370,
     "y": 40,
     "wires": []
@@ -58,7 +58,10 @@
     "acceptsClientConfig": [
       "ui-notification",
       "ui-control",
-      "ui-template"
+      "ui-template",
+      "ui-text",
+      "ui-switch",
+      "ui-slider"
     ],
     "showPathInSidebar": false,
     "headerContent": "page",
@@ -201,22 +204,22 @@
   },
   {
     "id": "1d2f00000000d003",
-    "type": "change",
+    "type": "function",
     "z": "1d2f00000000a001",
     "name": "Lưu thời gian mở",
-    "rules": [
-      {
-        "t": "set",
-        "p": "feedDurationS",
-        "pt": "flow",
-        "to": "payload",
-        "tot": "msg"
-      }
-    ],
+    "func": "// Inject lúc khởi động không có _client: ghi giá trị mặc định.\n// Thao tác từ trình duyệt phải có phiên (global.phien do ID 7 ghi).\n// passthru của widget đang tắt nên tin trả về không chạy vòng lặp.\nconst socketId = msg._client && msg._client.socketId;\nif (socketId) {\n    const phien = global.get('phien') || {};\n    if (!phien[socketId]) {\n        node.status({ fill: 'grey', shape: 'ring', text: 'bỏ qua, chưa đăng nhập' });\n        return { _client: msg._client, payload: flow.get('feedDurationS') ?? 1.5 };\n    }\n}\nflow.set('feedDurationS', msg.payload);\nnode.status({});\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
     "x": 590,
     "y": 100,
     "wires": [
-      []
+      [
+        "1d2f00000000d002"
+      ]
     ]
   },
   {
@@ -263,7 +266,7 @@
     "type": "function",
     "z": "1d2f00000000a001",
     "name": "Tạo lệnh cho ăn",
-    "func": "// Đổi giây trên thanh trượt sang duration_ms, giữ trong khoảng firmware cho phép.\nconst giay = Number(flow.get('feedDurationS') ?? 1.5);\nconst durationMs = Math.round(Math.min(5, Math.max(0.2, giay)) * 1000);\n\n// retain=false: nếu retain, mỗi lần ESP32 kết nối lại sẽ tự cho ăn thêm.\nconst lenh = { topic: 'feeder/cmd/feed', payload: { duration_ms: durationMs }, qos: 0, retain: false };\nconst hienThi = { payload: 'Đã gửi lệnh, đang chờ hộp...' };\nreturn [lenh, hienThi];",
+    "func": "// Chỉ trình duyệt đã đăng nhập mới được phát lệnh. Phiên nằm ở global\n// vì ID 7 là tab khác: flow context của tab này không thấy bảng phiên.\nconst socketId = msg._client && msg._client.socketId;\nconst phien = global.get('phien') || {};\nif (!socketId || !phien[socketId]) {\n    node.status({ fill: 'red', shape: 'ring', text: 'chưa đăng nhập' });\n    return [null, {\n        _client: msg._client,\n        payload: 'Chưa đăng nhập, không gửi lệnh cho ăn'\n    }];\n}\n\n// Đổi giây trên thanh trượt sang duration_ms, giữ trong khoảng firmware cho phép.\nconst giay = Number(flow.get('feedDurationS') ?? 1.5);\nconst durationMs = Math.round(Math.min(5, Math.max(0.2, giay)) * 1000);\n\n// retain=false: nếu retain, mỗi lần ESP32 kết nối lại sẽ tự cho ăn thêm.\nconst lenh = { topic: 'feeder/cmd/feed', payload: { duration_ms: durationMs }, qos: 0, retain: false };\nconst hienThi = { payload: 'Đã gửi lệnh, đang chờ hộp...' };\nnode.status({ fill: 'green', shape: 'dot', text: 'đã gửi lệnh' });\nreturn [lenh, hienThi];",
     "outputs": 2,
     "timeout": 0,
     "noerr": 0,
@@ -576,22 +579,22 @@
   },
   {
     "id": "1d2f000000005005",
-    "type": "change",
+    "type": "function",
     "z": "1d2f000000005000",
     "name": "Lưu công tắc",
-    "rules": [
-      {
-        "t": "set",
-        "p": "ntfyBat",
-        "pt": "flow",
-        "to": "payload",
-        "tot": "msg"
-      }
-    ],
+    "func": "// Inject lúc khởi động không có _client: ghi giá trị mặc định.\n// Thao tác từ trình duyệt phải có phiên (global.phien do ID 7 ghi).\n// passthru của widget đang tắt nên tin trả về không chạy vòng lặp.\nconst socketId = msg._client && msg._client.socketId;\nif (socketId) {\n    const phien = global.get('phien') || {};\n    if (!phien[socketId]) {\n        node.status({ fill: 'grey', shape: 'ring', text: 'bỏ qua, chưa đăng nhập' });\n        return { _client: msg._client, payload: flow.get('ntfyBat') !== false };\n    }\n}\nflow.set('ntfyBat', msg.payload);\nnode.status({});\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
     "x": 550,
     "y": 100,
     "wires": [
-      []
+      [
+        "1d2f000000005004"
+      ]
     ]
   },
   {
@@ -921,7 +924,7 @@
     "type": "function",
     "z": "1d2f000000008000",
     "name": "Nhận câu hỏi",
-    "func": "// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\n\nconst cau = String(msg.payload || '').trim().slice(0, 500);\nif (!cau) return [null, null];\n\nif (!url || !key || !env.get('GEMINI_API_KEY')) {\n    node.warn('Thiếu SUPABASE_URL, SUPABASE_KEY hoặc GEMINI_API_KEY');\n    msg.payload = 'Chatbot chưa được cấu hình.';\n    msg.traLoi = true;\n    return [null, msg];\n}\nmsg.cauHoi = cau;\nmsg.method = 'GET';\nmsg.url = url + '/rest/v1/feeder_events?select=created_at,level&event=eq.level&order=created_at.desc&limit=1';\nmsg.headers = { apikey: key, Authorization: 'Bearer ' + key };\nmsg.payload = null;\nreturn [msg, null];",
+    "func": "// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst socketId = msg._client && msg._client.socketId;\nconst phien = global.get('phien') || {};\nif (!socketId || !phien[socketId]) {\n    msg.payload = 'Chưa đăng nhập.';\n    msg.traLoi = true;\n    return [null, msg];\n}\n\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\n\nconst cau = String(msg.payload || '').trim().slice(0, 500);\nif (!cau) return [null, null];\n\nif (!url || !key || !env.get('GEMINI_API_KEY')) {\n    node.warn('Thiếu SUPABASE_URL, SUPABASE_KEY hoặc GEMINI_API_KEY');\n    msg.payload = 'Chatbot chưa được cấu hình.';\n    msg.traLoi = true;\n    return [null, msg];\n}\nmsg.cauHoi = cau;\nmsg.method = 'GET';\nmsg.url = url + '/rest/v1/feeder_events?select=created_at,level&event=eq.level&order=created_at.desc&limit=1';\nmsg.headers = { apikey: key, Authorization: 'Bearer ' + key };\nmsg.payload = null;\nreturn [msg, null];",
     "outputs": 2,
     "timeout": 0,
     "noerr": 0,

@@ -532,22 +532,22 @@
   },
   {
     "id": "7a1c000000006004",
-    "type": "change",
+    "type": "function",
     "z": "7a1c000000006000",
     "name": "Lưu công tắc",
-    "rules": [
-      {
-        "t": "set",
-        "p": "email_bat",
-        "pt": "flow",
-        "to": "payload",
-        "tot": "msg"
-      }
-    ],
+    "func": "// Inject lúc khởi động không có _client: ghi giá trị mặc định.\n// Thao tác từ trình duyệt phải có phiên (global.phien do ID 7 ghi).\n// passthru của widget đang tắt nên tin trả về không chạy vòng lặp.\nconst socketId = msg._client && msg._client.socketId;\nif (socketId) {\n    const phien = global.get('phien') || {};\n    if (!phien[socketId]) {\n        node.status({ fill: 'grey', shape: 'ring', text: 'bỏ qua, chưa đăng nhập' });\n        return { _client: msg._client, payload: flow.get('email_bat') !== false };\n    }\n}\nflow.set('email_bat', msg.payload);\nnode.status({});\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
     "x": 560,
     "y": 100,
     "wires": [
-      []
+      [
+        "7a1c000000006003"
+      ]
     ]
   },
   {
@@ -629,7 +629,7 @@
     "type": "function",
     "z": "7a1c000000006000",
     "name": "Hỏi mức mới nhất",
-    "func": "// Nút gửi thử bỏ qua công tắc để kiểm tra cấu hình bất cứ lúc nào.\nconst gui_thu = msg.payload === 'gui_thu';\nif (!gui_thu && flow.get('email_bat') === false) {\n    node.status({ fill: 'grey', shape: 'ring', text: 'công tắc tắt, không gửi' });\n    return null;\n}\nif (!env.get('EMAIL_TO')) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa đặt EMAIL_TO' });\n    return null;\n}\n// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\nif (!url || !key) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa cấu hình Supabase' });\n    return null;\n}\nnode.status({});\nreturn {\n    method: 'GET',\n    url: url + '/rest/v1/feeder_events?select=created_at,level&event=eq.level&order=created_at.desc&limit=1',\n    headers: { apikey: key, Authorization: 'Bearer ' + key },\n    payload: null\n};",
+    "func": "// Nút gửi thử bỏ qua công tắc để kiểm tra cấu hình bất cứ lúc nào.\n// Cron 20:00 không có _client và không cần phiên trình duyệt.\nconst gui_thu = msg.payload === 'gui_thu';\nif (gui_thu) {\n    const socketId = msg._client && msg._client.socketId;\n    const phien = global.get('phien') || {};\n    if (!socketId || !phien[socketId]) {\n        node.status({ fill: 'red', shape: 'ring', text: 'chưa đăng nhập' });\n        node.warn('Gửi thử email bị từ chối: chưa đăng nhập');\n        return null;\n    }\n}\nif (!gui_thu && flow.get('email_bat') === false) {\n    node.status({ fill: 'grey', shape: 'ring', text: 'công tắc tắt, không gửi' });\n    return null;\n}\nif (!env.get('EMAIL_TO')) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa đặt EMAIL_TO' });\n    return null;\n}\n// Đọc cấu hình Supabase từ biến môi trường, không ghi key vào flow vì repo public.\nconst url = env.get('SUPABASE_URL');\nconst key = env.get('SUPABASE_KEY');\nif (!url || !key) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'chưa cấu hình Supabase' });\n    return null;\n}\nnode.status({});\nreturn {\n    method: 'GET',\n    url: url + '/rest/v1/feeder_events?select=created_at,level&event=eq.level&order=created_at.desc&limit=1',\n    headers: { apikey: key, Authorization: 'Bearer ' + key },\n    payload: null\n};",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -1138,7 +1138,7 @@
     "type": "function",
     "z": "7a1c000000007000",
     "name": "So mật khẩu, ghi phiên",
-    "func": "// Tên trang phải trùng tên ui-page (ui-control tìm trang theo tên).\nconst TRANG_CHINH = 'Dashboard';\n\nconst mat_khau = String(msg.mat_khau_tam || '');\ndelete msg.mat_khau_tam;\nconst khach = msg._client;\nconst dong = Array.isArray(msg.payload) ? msg.payload[0] : null;\nconst sai = { _client: khach, payload: 'Sai tên đăng nhập hoặc mật khẩu' };\n\n// Không có user vẫn băm với muối giả để thời gian trả lời gần như nhau,\n// tránh dò xem tên nào đã tồn tại.\nconst muoi = dong ? Buffer.from(dong.muoi, 'hex') : crypto.randomBytes(16);\ncrypto.scrypt(mat_khau, muoi, 64, (loi, khoa) => {\n    if (loi) {\n        node.status({ fill: 'red', shape: 'dot', text: 'lỗi băm' });\n        node.warn('Không băm được mật khẩu: ' + loi.message);\n        node.send([null, null, { _client: khach, payload: 'Lỗi máy chủ, thử lại sau' }]);\n        node.done();\n        return;\n    }\n    const luu = dong ? Buffer.from(dong.mat_khau_hash, 'hex') : null;\n    // timingSafeEqual báo lỗi nếu khác độ dài nên kiểm tra trước.\n    const dung = !!luu && luu.length === khoa.length && crypto.timingSafeEqual(luu, khoa);\n    if (!dung) {\n        node.send([null, null, sai]);\n        node.done();\n        return;\n    }\n    const phien = flow.get('phien') || {};\n    phien[khach.socketId] = { ten: dong.ten_dang_nhap, luc: new Date().toISOString() };\n    flow.set('phien', phien);\n    node.status({ fill: 'green', shape: 'dot', text: Object.keys(phien).length + ' phiên' });\n    node.send([\n        { _client: khach, payload: { page: TRANG_CHINH } },\n        { _client: khach, payload: { ten: dong.ten_dang_nhap } },\n        { _client: khach, payload: 'Xin chào ' + dong.ten_dang_nhap }\n    ]);\n    node.done();\n});\nreturn null;",
+    "func": "// Tên trang phải trùng tên ui-page (ui-control tìm trang theo tên).\n// Phiên ghi vào global để tab cho ăn, email và chat đọc được.\nconst TRANG_CHINH = 'Dashboard';\n\nconst mat_khau = String(msg.mat_khau_tam || '');\ndelete msg.mat_khau_tam;\nconst khach = msg._client;\nconst dong = Array.isArray(msg.payload) ? msg.payload[0] : null;\nconst sai = { _client: khach, payload: 'Sai tên đăng nhập hoặc mật khẩu' };\n\n// Không có user vẫn băm với muối giả để thời gian trả lời gần như nhau,\n// tránh dò xem tên nào đã tồn tại.\nconst muoi = dong ? Buffer.from(dong.muoi, 'hex') : crypto.randomBytes(16);\ncrypto.scrypt(mat_khau, muoi, 64, (loi, khoa) => {\n    if (loi) {\n        node.status({ fill: 'red', shape: 'dot', text: 'lỗi băm' });\n        node.warn('Không băm được mật khẩu: ' + loi.message);\n        node.send([null, null, { _client: khach, payload: 'Lỗi máy chủ, thử lại sau' }]);\n        node.done();\n        return;\n    }\n    const luu = dong ? Buffer.from(dong.mat_khau_hash, 'hex') : null;\n    // timingSafeEqual báo lỗi nếu khác độ dài nên kiểm tra trước.\n    const dung = !!luu && luu.length === khoa.length && crypto.timingSafeEqual(luu, khoa);\n    if (!dung) {\n        node.send([null, null, sai]);\n        node.done();\n        return;\n    }\n    const phien = global.get('phien') || {};\n    phien[khach.socketId] = { ten: dong.ten_dang_nhap, luc: new Date().toISOString() };\n    global.set('phien', phien);\n    node.status({ fill: 'green', shape: 'dot', text: Object.keys(phien).length + ' phiên' });\n    node.send([\n        { _client: khach, payload: { page: TRANG_CHINH } },\n        { _client: khach, payload: { ten: dong.ten_dang_nhap } },\n        { _client: khach, payload: 'Xin chào ' + dong.ten_dang_nhap }\n    ]);\n    node.done();\n});\nreturn null;",
     "outputs": 3,
     "timeout": 0,
     "noerr": 0,
@@ -1222,7 +1222,7 @@
     "type": "function",
     "z": "7a1c000000007000",
     "name": "Kiểm tra phiên",
-    "func": "// ui-event gửi { topic: '$pageview', payload: { page: { id, name, path, ... }, query } }.\nconst TRANG_DANG_NHAP_ID = '7a1c000000007003';\nconst TRANG_DANG_NHAP = 'Đăng nhập';\n\nif (msg.topic !== '$pageview') return null;\nconst socket_id = msg._client && msg._client.socketId;\nif (!socket_id) return null;\nconst trang = (msg.payload && msg.payload.page) || {};\nif (trang.id === TRANG_DANG_NHAP_ID) return null;\n\nconst phien = flow.get('phien') || {};\nif (phien[socket_id]) return null;\n// Chưa đăng nhập mà vào trang khác: chỉ chuyển trình duyệt này.\nreturn { _client: msg._client, payload: { page: TRANG_DANG_NHAP } };",
+    "func": "// ui-event gửi { topic: '$pageview', payload: { page: { id, name, path, ... }, query } }.\nconst TRANG_DANG_NHAP_ID = '7a1c000000007003';\nconst TRANG_DANG_NHAP = 'Đăng nhập';\n\nif (msg.topic !== '$pageview') return null;\nconst socket_id = msg._client && msg._client.socketId;\nif (!socket_id) return null;\nconst trang = (msg.payload && msg.payload.page) || {};\nif (trang.id === TRANG_DANG_NHAP_ID) return null;\n\nconst phien = global.get('phien') || {};\nif (phien[socket_id]) return null;\n// Chưa đăng nhập mà vào trang khác: chỉ chuyển trình duyệt này.\nreturn { _client: msg._client, payload: { page: TRANG_DANG_NHAP } };",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -1268,7 +1268,7 @@
     "type": "function",
     "z": "7a1c000000007000",
     "name": "Hỏi tên / đăng xuất",
-    "func": "// ui-template gửi { hanh_dong: 'hoi_ten' } khi hiện ra, { hanh_dong: 'dang_xuat' } khi bấm nút.\nconst TRANG_DANG_NHAP = 'Đăng nhập';\n\nconst khach = msg._client;\nconst socket_id = khach && khach.socketId;\nif (!socket_id) return null;\nconst hanh_dong = msg.payload && msg.payload.hanh_dong;\nconst phien = flow.get('phien') || {};\n\nif (hanh_dong === 'hoi_ten') {\n    const p = phien[socket_id];\n    return [null, { _client: khach, payload: { ten: p ? p.ten : null } }];\n}\nif (hanh_dong === 'dang_xuat') {\n    delete phien[socket_id];\n    flow.set('phien', phien);\n    node.status({ fill: 'grey', shape: 'ring', text: Object.keys(phien).length + ' phiên' });\n    return [\n        { _client: khach, payload: { page: TRANG_DANG_NHAP } },\n        { _client: khach, payload: { ten: null } }\n    ];\n}\nreturn null;",
+    "func": "// ui-template gửi { hanh_dong: 'hoi_ten' } khi hiện ra, { hanh_dong: 'dang_xuat' } khi bấm nút.\nconst TRANG_DANG_NHAP = 'Đăng nhập';\n\nconst khach = msg._client;\nconst socket_id = khach && khach.socketId;\nif (!socket_id) return null;\nconst hanh_dong = msg.payload && msg.payload.hanh_dong;\nconst phien = global.get('phien') || {};\n\nif (hanh_dong === 'hoi_ten') {\n    const p = phien[socket_id];\n    return [null, { _client: khach, payload: { ten: p ? p.ten : null } }];\n}\nif (hanh_dong === 'dang_xuat') {\n    delete phien[socket_id];\n    global.set('phien', phien);\n    node.status({ fill: 'grey', shape: 'ring', text: Object.keys(phien).length + ' phiên' });\n    return [\n        { _client: khach, payload: { page: TRANG_DANG_NHAP } },\n        { _client: khach, payload: { ten: null } }\n    ];\n}\nreturn null;",
     "outputs": 2,
     "timeout": 0,
     "noerr": 0,
@@ -1306,7 +1306,7 @@
     "type": "function",
     "z": "7a1c000000007000",
     "name": "Xoá phiên khi ngắt",
-    "func": "// ui-control (events = connect) gửi payload 'connect' / 'lost' kèm msg._client.socketId.\nif (msg.payload !== 'lost') return null;\nconst socket_id = msg._client && msg._client.socketId;\nif (!socket_id) return null;\nconst phien = flow.get('phien') || {};\nif (phien[socket_id]) {\n    delete phien[socket_id];\n    flow.set('phien', phien);\n}\nnode.status({ fill: 'grey', shape: 'ring', text: Object.keys(phien).length + ' phiên' });\nreturn null;",
+    "func": "// ui-control (events = connect) gửi payload 'connect' / 'lost' kèm msg._client.socketId.\nif (msg.payload !== 'lost') return null;\nconst socket_id = msg._client && msg._client.socketId;\nif (!socket_id) return null;\nconst phien = global.get('phien') || {};\nif (phien[socket_id]) {\n    delete phien[socket_id];\n    global.set('phien', phien);\n}\nnode.status({ fill: 'grey', shape: 'ring', text: Object.keys(phien).length + ' phiên' });\nreturn null;",
     "outputs": 0,
     "timeout": 0,
     "noerr": 0,

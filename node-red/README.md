@@ -82,8 +82,9 @@ Bố cục trang Dashboard theo wireframe mục 2.2 của proposal. Cột trái 
 - Mật khẩu được băm bằng scrypt với muối ngẫu nhiên 16 byte. Truy vấn SQLite có tham số, nên không bị SQL injection.
 - Tên đăng nhập 3–32 ký tự, chỉ gồm chữ, số và `_`. Mật khẩu ít nhất 6 ký tự.
 - File `users.db` nằm ở thư mục chạy Node-RED (gốc repo nếu chạy `start.ps1` như trên), đã có trong `.gitignore`.
-- Phiên đăng nhập gắn với kết nối Dashboard của từng trình duyệt. F5 hoặc khởi động lại Node-RED thì phải đăng nhập lại.
-- Đây là kiểm soát ở mức giao diện cho đồ án, không thay cho xác thực HTTP thật (`httpNodeAuth`).
+- Phiên đăng nhập gắn với kết nối Dashboard của từng trình duyệt và lưu ở `global.phien` (không dùng `flow`, vì ID 7 nằm tab khác với nút cho ăn). F5 hoặc khởi động lại Node-RED thì phải đăng nhập lại.
+- Chưa đăng nhập thì trang Dashboard bị chuyển về trang đăng nhập. Backend cũng từ chối thao tác từ trình duyệt chưa có phiên: nút CHO ĂN không gửi MQTT, chat không gọi Supabase hay Gemini, nút gửi thử email không gửi, thanh thời gian mở và hai công tắc không ghi đè trạng thái dùng chung. Cron 20:00, inject lúc khởi động, đo mức, cảnh báo ntfy và biểu đồ vẫn chạy trên máy chủ.
+- Đăng nhập web không thay xác thực của broker MQTT. Broker công khai vẫn để ai cũng gửi `feeder/cmd/feed` được; khi chạy thật phải đặt user/pass trên HiveMQ hoặc EMQX. Đây cũng không phải `httpNodeAuth` của Node-RED.
 
 ## Bảo mật
 
